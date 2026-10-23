@@ -6,6 +6,9 @@ obj/
 publish/
 *.pdb
 
+# Release archives
+*.zip
+
 # Runtime data (portable state, cache, logs, staged exports)
 WallpaperStudioData/
 Exports/

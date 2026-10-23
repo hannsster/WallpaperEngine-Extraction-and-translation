@@ -1,0 +1,78 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish self-contained single-file app
+        run: >
+          dotnet publish src/WallpaperStudio/WallpaperStudio.csproj
+          -c Release -r win-x64 --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:DebugType=none
+          -o publish
+
+      - name: Stage portable layout
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path publish/ffmpeg | Out-Null
+          $ffmpegNote = @(
+            'FFmpeg is optional and is NOT bundled with Wallpaper Studio.'
+            'It is only needed to extract frames from video wallpapers.'
+            ''
+            'To enable video frame extraction, place ffmpeg.exe and ffprobe.exe'
+            'in this folder, or add them to your PATH, or pick their folder in'
+            "the app's Settings page."
+            ''
+            'FFmpeg: https://ffmpeg.org/download.html  (licensed separately)'
+          )
+          Set-Content -Path publish/ffmpeg/PUT-FFMPEG-HERE.txt -Value $ffmpegNote
+          Copy-Item README.md publish/README.md -Force
+
+      - name: Build zip
+        shell: pwsh
+        run: |
+          Get-ChildItem publish -Filter *.pdb -Recurse | Remove-Item -Force -ErrorAction SilentlyContinue
+          Compress-Archive -Path publish/* -DestinationPath WallpaperStudio-win-x64.zip -Force
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WallpaperStudio-win-x64
+          path: WallpaperStudio-win-x64.zip
+
+      - name: Create or update GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "${{ github.ref_name }}" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload "${{ github.ref_name }}" WallpaperStudio-win-x64.zip --clobber
+          }
+          else {
+            gh release create "${{ github.ref_name }}" WallpaperStudio-win-x64.zip `
+              --title "Wallpaper Studio ${{ github.ref_name }}" `
+              --generate-notes
+          }

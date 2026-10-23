@@ -58,7 +58,7 @@ public sealed class LibraryViewModel : ObservableObject
 
         BrowseSourceCommand = new RelayCommand(BrowseSource);
         ScanCommand = _scanCommand;
-        ExportAllCommand = new AsyncRelayCommand(ExportAllAsync);
+        ExportAllCommand = new AsyncRelayCommand(ExportAllAsync, HasExportCandidates);
         ((AsyncRelayCommand)ExportAllCommand).ExecutionFailed += (_, ex) => _dialogs.ShowError("Export failed", ex.Message, ex);
         ExportItemCommand = new RelayCommand<WallpaperSource>(item => _ = ExportItemSafeAsync(item));
         ReviewItemCommand = new RelayCommand<WallpaperSource>(item => RequestReview(item));
@@ -137,7 +137,13 @@ public sealed class LibraryViewModel : ObservableObject
     public bool ForceReExport
     {
         get => _forceReExport;
-        set => SetProperty(ref _forceReExport, value);
+        set
+        {
+            if (SetProperty(ref _forceReExport, value) && ExportAllCommand is AsyncRelayCommand exportAll)
+            {
+                exportAll.RaiseCanExecuteChanged();
+            }
+        }
     }
 
     public int DuplicatesSkipped
@@ -396,11 +402,15 @@ public sealed class LibraryViewModel : ObservableObject
         }
     }
 
+    private bool HasExportCandidates() => Wallpapers.Any(IsExportCandidate);
+
+    private bool IsExportCandidate(WallpaperSource item) =>
+        item.CanExportNow && (ForceReExport || !Settings.SkipAlreadyExported || !item.IsExported);
+
     private async Task ExportAllAsync()
     {
         var candidates = Wallpapers
-            .Where(item => item.CanExportNow)
-            .Where(item => ForceReExport || !Settings.SkipAlreadyExported || !item.IsExported)
+            .Where(IsExportCandidate)
             .ToList();
 
         if (candidates.Count == 0)
@@ -669,6 +679,11 @@ public sealed class LibraryViewModel : ObservableObject
         if (ClearCommand is RelayCommand clear)
         {
             clear.RaiseCanExecuteChanged();
+        }
+
+        if (ExportAllCommand is AsyncRelayCommand exportAll)
+        {
+            exportAll.RaiseCanExecuteChanged();
         }
     }
 }

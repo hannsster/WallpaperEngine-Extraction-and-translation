@@ -6,6 +6,14 @@ A portable Windows desktop tool for turning locally installed **Wallpaper Engine
 
 ![Wallpaper Studio](src/WallpaperStudio/Assets/app-icon.png)
 
+## Download
+
+Grab the latest portable build from the [**Releases**](../../releases) page:
+
+- **`WallpaperStudio-win-x64.zip`** — self-contained 64-bit Windows build. No .NET install required. Extract anywhere and run `WallpaperStudio.exe`.
+- FFmpeg is optional (video frames only) and is not bundled; see [Requirements](#requirements).
+
+
 ## What it does
 
 - Recursively scans a folder of Wallpaper Engine content:
