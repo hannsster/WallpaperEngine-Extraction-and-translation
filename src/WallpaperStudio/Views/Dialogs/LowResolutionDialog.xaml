@@ -1,0 +1,90 @@
+<Window x:Class="WallpaperStudio.Views.Dialogs.LowResolutionDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Low resolution image"
+        Width="600"
+        SizeToContent="Height"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        WindowStartupLocation="CenterOwner"
+        FontFamily="{StaticResource Font.Ui}">
+
+    <Border Margin="20" CornerRadius="20" Background="#F7141B28" BorderBrush="{StaticResource Brush.BorderStrong}"
+            BorderThickness="1" Effect="{StaticResource Shadow.Soft}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Header (drag area) -->
+            <Grid Grid.Row="0" Margin="20,16,12,0" MouseLeftButtonDown="Header_MouseLeftButtonDown">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal">
+                    <Border Width="30" Height="30" CornerRadius="9" Background="#26F5C46B">
+                        <TextBlock Text="&#xE7BA;" FontFamily="{StaticResource Font.Icon}" FontSize="14"
+                                   Foreground="{StaticResource Brush.Warning}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Below the 1080p rule" FontSize="15" FontWeight="SemiBold" />
+                        <TextBlock Text="Approve anyway or toss this image" Style="{StaticResource Micro}" />
+                    </StackPanel>
+                </StackPanel>
+                <Button Grid.Column="1" Style="{StaticResource IconButton}" Content="&#xE711;"
+                        ToolTip="Cancel batch" Click="CancelButton_Click" />
+            </Grid>
+
+            <!-- Preview -->
+            <Border Grid.Row="1" Margin="20,16,20,0" Height="190" CornerRadius="12" Background="#080B11">
+                <Grid>
+                    <Border CornerRadius="12">
+                        <Border.Background>
+                            <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="Uniform" />
+                        </Border.Background>
+                    </Border>
+                    <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource Font.Icon}" FontSize="30"
+                               Foreground="#33FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               Visibility="{Binding HasThumbnail, Converter={StaticResource InverseBoolToVisibility}}" />
+                    <Border Style="{StaticResource Chip}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10"
+                            Background="#B3070A10" BorderBrush="#26FFFFFF">
+                        <TextBlock Text="{Binding ResolutionText}" Style="{StaticResource ChipText}"
+                                   Foreground="#D7E1F2" FontFamily="{StaticResource Font.Mono}" />
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- Explanation -->
+            <StackPanel Grid.Row="2" Margin="20,16,20,0">
+                <TextBlock Text="{Binding FileName}" Style="{StaticResource CardTitle}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding RuleText}" Style="{StaticResource Caption}" Margin="0,6,0,0" />
+                <Border Style="{StaticResource InsetCard}" Padding="11,9" Margin="0,11,0,0">
+                    <TextBlock Text="Approving keeps the original resolution. Wallpaper Studio never upscales, and the queue still marks this image as low-resolution so you can spot it later."
+                               Style="{StaticResource Micro}" TextWrapping="Wrap" />
+                </Border>
+            </StackPanel>
+
+            <!-- Actions -->
+            <Grid Grid.Row="3" Margin="20,16,20,18">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button Style="{StaticResource GhostButton}" Content="Cancel batch" HorizontalAlignment="Left"
+                        Click="CancelButton_Click" />
+                <Button Grid.Column="1" Style="{StaticResource DangerButton}" Content="Toss image" Margin="0,0,8,0"
+                        Click="TossButton_Click" />
+                <Button Grid.Column="2" Style="{StaticResource PrimaryButton}" Content="Approve anyway"
+                        Click="ApproveButton_Click" />
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

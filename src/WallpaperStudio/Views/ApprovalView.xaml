@@ -1,0 +1,222 @@
+<UserControl x:Class="WallpaperStudio.Views.ApprovalView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="1040" d:DesignHeight="780">
+
+    <Grid>
+        <!-- Empty state -->
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="460"
+                    Visibility="{Binding HasItem, Converter={StaticResource InverseBoolToVisibility}}">
+            <Border Width="64" Height="64" CornerRadius="20" Background="{StaticResource Brush.AccentSoft}"
+                    HorizontalAlignment="Center">
+                <TextBlock Text="&#xE8B9;" FontFamily="{StaticResource Font.Icon}" FontSize="26"
+                           Foreground="{StaticResource Brush.Accent}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <TextBlock Text="Nothing to review" FontSize="19" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,16,0,0" />
+            <TextBlock Text="Choose a video, scene or workshop wallpaper in the library and select Review frame. You will always see the exact frame before it is exported."
+                       Style="{StaticResource PageSubtitle}" TextAlignment="Center" Margin="0,8,0,0" />
+            <Button Style="{StaticResource SecondaryButton}" Content="Back to library" HorizontalAlignment="Center"
+                    Margin="0,18,0,0" Command="{Binding BackCommand}" />
+        </StackPanel>
+
+        <Grid Visibility="{Binding HasItem, Converter={StaticResource BoolToVisibility}}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <Grid Grid.Row="0" Margin="0,0,0,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Button Style="{StaticResource IconButton}" Content="&#xE72B;" ToolTip="Back to library"
+                        Command="{Binding BackCommand}" Margin="0,2,12,0" VerticalAlignment="Top" />
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitle}" TextTrimming="CharacterEllipsis"
+                               MaxWidth="640" HorizontalAlignment="Left" />
+                    <TextBlock Text="{Binding MetadataSummary}" Style="{StaticResource PageSubtitle}" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource GhostButton}" Content="Open source location"
+                            Command="{Binding OpenFileLocationCommand}" Margin="0,0,8,0" />
+                    <Button Style="{StaticResource SecondaryButton}" Content="Open exports"
+                            Command="{Binding OpenExportFolderCommand}" />
+                </StackPanel>
+            </Grid>
+
+            <!-- Body -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="384" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Preview -->
+                <Border Style="{StaticResource RaisedCard}" Padding="14" Margin="0,0,16,0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Grid Margin="2,0,2,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="EXPORT CANDIDATE" Style="{StaticResource Micro}" VerticalAlignment="Center" />
+                            <Border Grid.Column="1" Style="{StaticResource Chip}"
+                                    Background="#1A6C9BFF" BorderBrush="#33FFFFFF">
+                                <TextBlock Text="{Binding CandidateSourceLabel}" Style="{StaticResource ChipText}"
+                                           Foreground="{StaticResource Brush.TextSecondary}" />
+                            </Border>
+                        </Grid>
+
+                        <Border Grid.Row="1" CornerRadius="14" Background="#080B11" MinHeight="380"
+                                BorderBrush="{StaticResource Brush.BorderFaint}" BorderThickness="1">
+                            <Grid>
+                                <Border CornerRadius="14">
+                                    <Border.Background>
+                                        <ImageBrush ImageSource="{Binding PreviewImage}" Stretch="Uniform" />
+                                    </Border.Background>
+                                </Border>
+
+                                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="360"
+                                            Visibility="{Binding HasPreview, Converter={StaticResource InverseBoolToVisibility}}">
+                                    <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource Font.Icon}" FontSize="38"
+                                               Foreground="#3DFFFFFF" HorizontalAlignment="Center" />
+                                    <TextBlock Text="No frame selected" FontSize="15" FontWeight="SemiBold"
+                                               HorizontalAlignment="Center" Margin="0,12,0,0" Foreground="{StaticResource Brush.TextSecondary}" />
+                                    <TextBlock Text="Generate a video frame, scan a package for a safe preview, or choose an image."
+                                               Style="{StaticResource Caption}" TextAlignment="Center" Margin="0,6,0,0" />
+                                </StackPanel>
+
+                                <!-- Busy overlay -->
+                                <Border Background="#B3070A10" CornerRadius="14"
+                                        Visibility="{Binding IsExtracting, Converter={StaticResource BoolToVisibility}}">
+                                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="280">
+                                        <ProgressBar Style="{StaticResource SlimProgressBar}" IsIndeterminate="True" />
+                                        <TextBlock Text="{Binding BusyMessage}" Style="{StaticResource Caption}"
+                                                   TextAlignment="Center" Margin="0,12,0,0" />
+                                    </StackPanel>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <TextBlock Grid.Row="2" Text="{Binding PreviewPathDisplay}" Style="{StaticResource MonoPath}"
+                                   Margin="2,10,2,0" />
+                    </Grid>
+                </Border>
+
+                <!-- Details -->
+                <Border Style="{StaticResource GlassCard}" Padding="0">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="18,16,14,16">
+                        <StackPanel>
+                            <!-- Fallback notice -->
+                            <Border Style="{StaticResource InsetCard}" Padding="13,11" Margin="0,0,0,12"
+                                    Background="#1FF5C46B" BorderBrush="#4DF5C46B"
+                                    Visibility="{Binding HasFallbackNotice, Converter={StaticResource BoolToVisibility}}">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE7BA;" FontFamily="{StaticResource Font.Icon}" FontSize="13"
+                                                   Foreground="{StaticResource Brush.Warning}" VerticalAlignment="Center" />
+                                        <TextBlock Text="Preview / fallback" FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource Brush.Warning}" Margin="7,0,0,0" />
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding FallbackNotice}" Style="{StaticResource Caption}"
+                                               Foreground="#F1DDB6" Margin="0,7,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Generic notice -->
+                            <Border Style="{StaticResource InsetCard}" Padding="13,11" Margin="0,0,0,12"
+                                    Visibility="{Binding HasNotice, Converter={StaticResource BoolToVisibility}}">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE946;" FontFamily="{StaticResource Font.Icon}" FontSize="13"
+                                                   Foreground="{StaticResource Brush.Accent}" VerticalAlignment="Center" />
+                                        <TextBlock Text="Heads up" FontSize="12" FontWeight="SemiBold" Margin="7,0,0,0" />
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding Notice}" Style="{StaticResource Caption}" Margin="0,7,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Text="SOURCE" Style="{StaticResource Micro}" />
+                            <Border Style="{StaticResource InsetCard}" Padding="11,9" Margin="0,7,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding SourcePath}" Style="{StaticResource MonoPath}"
+                                               TextWrapping="Wrap" TextTrimming="None" />
+                                    <TextBlock Text="{Binding ResolutionDetail}" Style="{StaticResource Caption}" Margin="0,7,0,0" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Video frame picker -->
+                            <StackPanel Margin="0,16,0,0" Visibility="{Binding IsVideo, Converter={StaticResource BoolToVisibility}}">
+                                <Grid>
+                                    <TextBlock Text="FRAME TIMESTAMP" Style="{StaticResource Micro}" />
+                                    <TextBlock Text="{Binding FrameTimestampText}" Style="{StaticResource Micro}"
+                                               HorizontalAlignment="Right" Foreground="{StaticResource Brush.Accent}" />
+                                </Grid>
+                                <Slider Style="{StaticResource ModernSlider}" Margin="0,8,0,0"
+                                        Minimum="0" Maximum="{Binding MaxTimestamp}"
+                                        Value="{Binding FrameTimestamp, Mode=TwoWay}"
+                                        IsEnabled="{Binding CanScrub}" />
+                                <Grid Margin="0,2,0,0">
+                                    <TextBlock Text="00:00" Style="{StaticResource Micro}" />
+                                    <TextBlock Text="{Binding DurationSeconds, Converter={StaticResource TubeTime}}"
+                                               Style="{StaticResource Micro}" HorizontalAlignment="Right" />
+                                </Grid>
+                                <Button Style="{StaticResource SecondaryButton}" Content="Regenerate frame at this time"
+                                        HorizontalAlignment="Left" Margin="0,10,0,0"
+                                        Command="{Binding RegenerateCommand}" />
+                                <TextBlock Text="FFmpeg not found. Set its folder in Settings to extract video frames."
+                                           Style="{StaticResource Caption}" Foreground="{StaticResource Brush.Warning}"
+                                           Margin="0,7,0,0"
+                                           Visibility="{Binding HasFfmpeg, Converter={StaticResource InverseBoolToVisibility}}" />
+                            </StackPanel>
+
+                            <!-- Scene tools -->
+                            <StackPanel Margin="0,16,0,0" Visibility="{Binding IsScene, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="SCENE FALLBACK" Style="{StaticResource Micro}" />
+                                <TextBlock Text="Scene rendering is not implemented. The app only offers the project's preview image or a validated plain image embedded in the .pkg. It never unpacks or interprets scene data."
+                                           Style="{StaticResource Caption}" Margin="0,7,0,0" />
+                                <Button Style="{StaticResource SecondaryButton}" Content="Find embedded preview"
+                                        HorizontalAlignment="Left" Margin="0,10,0,0"
+                                        Command="{Binding ScanEmbeddedCommand}" />
+                            </StackPanel>
+
+                            <Border Style="{StaticResource Divider}" />
+
+                            <!-- Actions -->
+                            <StackPanel>
+                                <TextBlock Text="DECISION" Style="{StaticResource Micro}" Margin="0,0,0,4" />
+                                <TextBlock Text="{Binding ApprovalStatusLabel}" Style="{StaticResource Caption}" Margin="0,0,0,10" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Button Style="{StaticResource PrimaryButton}" Content="Approve this frame"
+                                            Command="{Binding ApproveCommand}" HorizontalContentAlignment="Center" />
+                                    <Button Grid.Column="1" Style="{StaticResource DangerButton}" Content="Toss"
+                                            Margin="8,0,0,0" Command="{Binding TossCommand}" />
+                                </Grid>
+                                <Button Style="{StaticResource SecondaryButton}" Content="Choose a different image…"
+                                        Margin="0,8,0,0" Command="{Binding ChooseImageCommand}" />
+                                <TextBlock Text="Approved frames are exported as high-quality JPEGs. Videos and scenes are never exported without this step."
+                                           Style="{StaticResource Micro}" Margin="0,10,0,0" />
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Border>
+            </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

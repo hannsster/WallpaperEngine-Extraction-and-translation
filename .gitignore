@@ -1,0 +1,28 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+publish/
+*.pdb
+
+# Runtime data (portable state, cache, logs, staged exports)
+WallpaperStudioData/
+Exports/
+StagedImports/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.DotSettings.user
+
+# Test output
+TestResults/
+*.trx
+
+# OS junk
+Thumbs.db
+Desktop.ini
+.DS_Store

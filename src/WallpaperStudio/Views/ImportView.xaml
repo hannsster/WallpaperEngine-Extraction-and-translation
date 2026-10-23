@@ -1,0 +1,265 @@
+<UserControl x:Class="WallpaperStudio.Views.ImportView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignWidth="1040" d:DesignHeight="780">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+                <TextBlock Text="Import Queue" Style="{StaticResource PageTitle}" />
+                <TextBlock Text="Prepare images for a manual Wallpaper Engine import. Nothing is published or uploaded." Style="{StaticResource PageSubtitle}" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Style="{StaticResource SecondaryButton}" Content="Add images…" Command="{Binding AddImagesCommand}" Margin="0,0,8,0" />
+                <Button Style="{StaticResource SecondaryButton}" Content="Add folder…" Command="{Binding AddFolderCommand}" Margin="0,0,8,0" />
+                <Button Style="{StaticResource PrimaryButton}" Content="Stage approved" Command="{Binding StageCommand}" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Rule + safety notes -->
+        <Grid Grid.Row="1" Margin="0,14,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Style="{StaticResource RaisedCard}" Padding="16,13" Margin="0,0,8,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="34" Height="34" CornerRadius="10" Background="{StaticResource Brush.AccentSoft}">
+                        <TextBlock Text="&#xE9D9;" FontFamily="{StaticResource Font.Icon}" FontSize="15"
+                                   Foreground="{StaticResource Brush.Accent}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="11,0,0,0">
+                        <TextBlock Text="Resolution gate" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding RuleSummary}" Style="{StaticResource Caption}" Margin="0,3,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="1" Style="{StaticResource RaisedCard}" Padding="16,13" Margin="8,0,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="34" Height="34" CornerRadius="10" Background="#1F63D6A6">
+                        <TextBlock Text="&#xE72E;" FontFamily="{StaticResource Font.Icon}" FontSize="15"
+                                   Foreground="{StaticResource Brush.Success}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="11,0,0,0">
+                        <TextBlock Text="Manual, safe import" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock Text="Wallpaper Engine has no documented CLI import or Workshop publish API. Staging copies files to a folder and writes instructions; you import them in the app yourself."
+                                   Style="{StaticResource Caption}" Margin="0,3,0,0" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <!-- Queue stats + pending banner -->
+        <Grid Grid.Row="2" Margin="0,14,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Style="{StaticResource InsetCard}" Padding="13,8" Margin="0,0,8,0" MinWidth="96">
+                    <StackPanel>
+                        <TextBlock Text="{Binding TotalCount, StringFormat={}{0:N0}}" FontSize="18" FontWeight="SemiBold" />
+                        <TextBlock Text="Queued" Style="{StaticResource Micro}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource InsetCard}" Padding="13,8" Margin="0,0,8,0" MinWidth="96">
+                    <StackPanel>
+                        <TextBlock Text="{Binding ApprovedCount, StringFormat={}{0:N0}}" FontSize="18" FontWeight="SemiBold"
+                                   Foreground="{StaticResource Brush.Accent}" />
+                        <TextBlock Text="Approved" Style="{StaticResource Micro}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource InsetCard}" Padding="13,8" Margin="0,0,8,0" MinWidth="96">
+                    <StackPanel>
+                        <TextBlock Text="{Binding PendingCount, StringFormat={}{0:N0}}" FontSize="18" FontWeight="SemiBold"
+                                   Foreground="{StaticResource Brush.Warning}" />
+                        <TextBlock Text="Needs decision" Style="{StaticResource Micro}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource InsetCard}" Padding="13,8" Margin="0,0,8,0" MinWidth="96">
+                    <StackPanel>
+                        <TextBlock Text="{Binding LowResolutionCount, StringFormat={}{0:N0}}" FontSize="18" FontWeight="SemiBold"
+                                   Foreground="{StaticResource Brush.Warning}" />
+                        <TextBlock Text="Below 1080p" Style="{StaticResource Micro}" />
+                    </StackPanel>
+                </Border>
+                <Border Style="{StaticResource InsetCard}" Padding="13,8" MinWidth="96">
+                    <StackPanel>
+                        <TextBlock Text="{Binding TossedCount, StringFormat={}{0:N0}}" FontSize="18" FontWeight="SemiBold"
+                                   Foreground="{StaticResource Brush.Danger}" />
+                        <TextBlock Text="Tossed" Style="{StaticResource Micro}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <Border Grid.Column="1" Style="{StaticResource InsetCard}" Padding="12,8" Margin="12,0"
+                    Background="#1FF5C46B" BorderBrush="#4DF5C46B"
+                    Visibility="{Binding HasPendingDecisions, Converter={StaticResource BoolToVisibility}}">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="&#xE7BA;" FontFamily="{StaticResource Font.Icon}" FontSize="13"
+                               Foreground="{StaticResource Brush.Warning}" VerticalAlignment="Center" />
+                    <TextBlock Text="Some images are below 1080p. Staging will ask you to approve anyway or toss each one."
+                               FontSize="12" Foreground="#F4DFB8" Margin="8,0,0,0" VerticalAlignment="Center" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button Style="{StaticResource GhostButton}" Content="Clear queue" Command="{Binding ClearCommand}" Margin="0,0,8,0" />
+                <Button Style="{StaticResource SecondaryButton}" Content="Launch Wallpaper Engine" Command="{Binding LaunchWallpaperEngineCommand}" />
+            </StackPanel>
+        </Grid>
+
+        <!-- Queue + staging result -->
+        <Grid Grid.Row="3">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,8,0">
+                <ItemsControl ItemsSource="{Binding Items}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Style="{StaticResource GlassCard}" Padding="11" Margin="0,0,0,10">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <!-- Thumbnail -->
+                                    <Border Width="92" Height="58" CornerRadius="9" Background="#0E141F">
+                                        <Grid>
+                                            <Border CornerRadius="9">
+                                                <Border.Background>
+                                                    <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                                </Border.Background>
+                                            </Border>
+                                            <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource Font.Icon}" FontSize="18"
+                                                       Foreground="#33FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       Visibility="{Binding HasThumbnail, Converter={StaticResource InverseBoolToVisibility}}" />
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- Info -->
+                                    <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding FileName}" Style="{StaticResource CardTitle}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding FilePath}" Style="{StaticResource MonoPath}" Margin="0,3,0,0" MaxWidth="520" />
+                                        <TextBlock Text="{Binding RuleText}" Style="{StaticResource Micro}" Margin="0,4,0,0"
+                                                   Foreground="{StaticResource Brush.Warning}"
+                                                   Visibility="{Binding IsLowResolution, Converter={StaticResource BoolToVisibility}}" />
+                                        <TextBlock Text="{Binding Message}" Style="{StaticResource Micro}" Margin="0,4,0,0"
+                                                   Visibility="{Binding Message, Converter={StaticResource NullToVisibility}}" />
+                                    </StackPanel>
+
+                                    <!-- Resolution + status -->
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center" MinWidth="128" Margin="0,0,14,0">
+                                        <TextBlock Text="{Binding ResolutionText}" FontFamily="{StaticResource Font.Mono}"
+                                                   FontSize="12.5" Foreground="{StaticResource Brush.TextSecondary}"
+                                                   HorizontalAlignment="Right" />
+                                        <TextBlock Text="{Binding FileSizeText}" Style="{StaticResource Micro}"
+                                                   HorizontalAlignment="Right" Margin="0,3,0,6" />
+                                        <Border Style="{StaticResource Chip}" HorizontalAlignment="Right"
+                                                Background="{Binding StatusTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                                                BorderBrush="{Binding StatusTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+                                            <TextBlock Text="{Binding StatusLabel}" Style="{StaticResource ChipText}"
+                                                       Foreground="{Binding StatusTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}" />
+                                        </Border>
+                                    </StackPanel>
+
+                                    <!-- Actions -->
+                                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center"
+                                                Visibility="{Binding IsStaged, Converter={StaticResource InverseBoolToVisibility}}">
+                                        <Button Style="{StaticResource SmallButton}" Content="Approve" Margin="0,0,6,0"
+                                                Command="{Binding DataContext.ApproveItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}" />
+                                        <Button Style="{StaticResource SmallButton}" Content="Toss" Margin="0,0,4,0"
+                                                Command="{Binding DataContext.TossItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}" />
+                                        <Button Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Remove from queue"
+                                                Command="{Binding DataContext.RemoveItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+
+            <!-- Staging result -->
+            <Border Grid.Row="1" Style="{StaticResource GlassCard}" Padding="16,13" Margin="0,6,8,0"
+                    Background="#1F63D6A6" BorderBrush="#4D63D6A6"
+                    Visibility="{Binding HasStagingResult, Converter={StaticResource BoolToVisibility}}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="34" Height="34" CornerRadius="10" Background="#3363D6A6">
+                        <TextBlock Text="&#xE73E;" FontFamily="{StaticResource Font.Icon}" FontSize="15"
+                                   Foreground="{StaticResource Brush.Success}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="1" Margin="11,0,12,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding StagingSummary}" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding StagingFolderDisplay}" Style="{StaticResource MonoPath}" Margin="0,3,0,0" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button Style="{StaticResource SmallButton}" Content="Open folder" Command="{Binding OpenStagingFolderCommand}" Margin="0,0,6,0" />
+                        <Button Style="{StaticResource SmallButton}" Content="Instructions" Command="{Binding ShowInstructionsCommand}" Margin="0,0,6,0" />
+                        <Button Style="{StaticResource SmallButton}" Content="Copy steps" Command="{Binding CopyInstructionsCommand}" Margin="0,0,6,0" />
+                        <Button Style="{StaticResource SmallButton}" Content="How to import" Command="{Binding ManualInstructionsCommand}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Empty state -->
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480"
+                        Visibility="{Binding IsEmpty, Converter={StaticResource BoolToVisibility}}">
+                <Border Width="64" Height="64" CornerRadius="20" Background="{StaticResource Brush.AccentSoft}"
+                        HorizontalAlignment="Center">
+                    <TextBlock Text="&#xE8B5;" FontFamily="{StaticResource Font.Icon}" FontSize="26"
+                               Foreground="{StaticResource Brush.Accent}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <TextBlock Text="Nothing queued for import" FontSize="18" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" Margin="0,16,0,0" />
+                <TextBlock Text="Add single images or a whole folder. Images below the 1080p rule will ask for an explicit decision before staging."
+                           Style="{StaticResource PageSubtitle}" TextAlignment="Center" Margin="0,8,0,0" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,18,0,0">
+                    <Button Style="{StaticResource PrimaryButton}" Content="Add images…" Command="{Binding AddImagesCommand}" Margin="0,0,8,0" />
+                    <Button Style="{StaticResource SecondaryButton}" Content="Add folder…" Command="{Binding AddFolderCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

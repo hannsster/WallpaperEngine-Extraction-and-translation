@@ -1,0 +1,207 @@
+﻿<Window x:Class="WallpaperStudio.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        mc:Ignorable="d"
+        Title="Wallpaper Studio"
+        Icon="Assets/app-icon.png"
+        Width="1320" Height="880"
+        MinWidth="1040" MinHeight="660"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None"
+        ResizeMode="CanResize"
+        AllowsTransparency="False"
+        Background="#00000000"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        TextOptions.TextFormattingMode="Ideal"
+        FontFamily="{StaticResource Font.Ui}">
+
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="48"
+                            ResizeBorderThickness="6"
+                            GlassFrameThickness="-1"
+                            CornerRadius="0"
+                            UseAeroCaptionButtons="False" />
+    </shell:WindowChrome.WindowChrome>
+
+    <Grid Background="{StaticResource Brush.WindowBackground}">
+        <!-- Ambient light. Purely decorative and non-interactive. -->
+        <Ellipse Fill="{StaticResource Brush.AmbientGlow}" IsHitTestVisible="False"
+                 HorizontalAlignment="Left" VerticalAlignment="Top"
+                 Width="1000" Height="760" Margin="-320,-360,0,0" />
+        <Ellipse Fill="{StaticResource Brush.AmbientGlowWarm}" IsHitTestVisible="False"
+                 HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                 Width="820" Height="620" Margin="0,0,-260,-280" />
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="48" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="42" />
+            </Grid.RowDefinitions>
+
+            <!-- ============================ Title bar ============================ -->
+            <Border Grid.Row="0" Background="#33000000" BorderBrush="{StaticResource Brush.BorderFaint}"
+                    BorderThickness="0,0,0,1">
+                <Grid Margin="18,0,10,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Width="26" Height="26" CornerRadius="8"
+                                Background="{StaticResource Brush.AccentGradient}"
+                                Effect="{StaticResource Shadow.Glow}">
+                            <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource Font.Icon}" FontSize="13"
+                                       Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="Wallpaper Studio" FontWeight="SemiBold" FontSize="13" />
+                            <TextBlock Text="Personal wallpaper toolkit" Style="{StaticResource Micro}" Margin="0,1,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                                shell:WindowChrome.IsHitTestVisibleInChrome="True">
+                        <Border Style="{StaticResource Chip}" Margin="0,0,12,0"
+                                Background="{Binding StorageTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                                BorderBrush="{Binding StorageTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse Style="{StaticResource StatusDot}"
+                                         Fill="{Binding StorageTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}" />
+                                <TextBlock Text="{Binding StorageBadge}" Margin="6,0,0,0"
+                                           Style="{StaticResource ChipText}"
+                                           Foreground="{Binding StorageTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}" />
+                            </StackPanel>
+                        </Border>
+                        <Button x:Name="MinimizeButton" Style="{StaticResource IconButton}"
+                                Content="&#xE921;" ToolTip="Minimize" Click="MinimizeButton_Click" />
+                        <Button x:Name="MaximizeButton" Style="{StaticResource IconButton}"
+                                Content="&#xE922;" ToolTip="Maximize" Click="MaximizeButton_Click" />
+                        <Button x:Name="CloseButton" Style="{StaticResource CloseIconButton}"
+                                Content="&#xE8BB;" ToolTip="Close" Click="CloseButton_Click" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- ============================= Body ============================== -->
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="236" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Navigation rail -->
+                <Border Grid.Column="0" Background="#4D000000" BorderBrush="{StaticResource Brush.BorderFaint}"
+                        BorderThickness="0,0,1,0">
+                    <Grid Margin="14,18,14,14">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <StackPanel>
+                            <TextBlock Text="WORKSPACE" Style="{StaticResource Micro}" Margin="12,0,0,8" />
+                            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav"
+                                         Tag="&#xE8F1;" Content="Library"
+                                         IsChecked="{Binding IsLibraryPage, Mode=OneWay}"
+                                         Command="{Binding ShowLibraryCommand}" />
+                            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav"
+                                         Tag="&#xE8B9;" Content="Frame review"
+                                         IsChecked="{Binding IsApprovalPage, Mode=OneWay}"
+                                         Command="{Binding ShowApprovalCommand}" />
+                            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav"
+                                         Tag="&#xE8B5;" Content="Import queue"
+                                         IsChecked="{Binding IsImportPage, Mode=OneWay}"
+                                         Command="{Binding ShowImportCommand}" />
+                            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav"
+                                         Tag="&#xE713;" Content="Settings"
+                                         IsChecked="{Binding IsSettingsPage, Mode=OneWay}"
+                                         Command="{Binding ShowSettingsCommand}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2">
+                            <Border Style="{StaticResource InsetCard}" Padding="12" Margin="0,0,0,12">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Ellipse Style="{StaticResource StatusDot}" Fill="{StaticResource Brush.Success}" />
+                                        <TextBlock Text="LOCAL LIBRARY MEMORY" Style="{StaticResource Micro}" Margin="7,0,0,0" />
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding KnownRecords, StringFormat={}{0:N0} remembered sources}"
+                                               Style="{StaticResource Caption}" Margin="0,7,0,0" />
+                                    <TextBlock Text="{Binding DataLocation}" Style="{StaticResource MonoPath}"
+                                               Margin="0,4,0,0" MaxWidth="176" />
+                                    <Button Content="Open log folder" Style="{StaticResource GhostButton}"
+                                            HorizontalAlignment="Left" Padding="0,6,0,0" FontSize="11.5"
+                                            Command="{Binding OpenLogFolderCommand}" />
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Text="{Binding VersionText}" Style="{StaticResource Micro}" Margin="12,0,0,2" />
+                            <TextBlock Text="For personal use only" Style="{StaticResource Micro}" Margin="12,0,0,0"
+                                       Foreground="{StaticResource Brush.TextTertiary}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Page host -->
+                <Grid Grid.Column="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <ContentControl Grid.Row="0" Content="{Binding CurrentPage}" Margin="26,20,26,0"
+                                    HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                        <ContentControl.Resources>
+                            <Style TargetType="ContentControl">
+                                <Setter Property="Focusable" Value="False" />
+                            </Style>
+                        </ContentControl.Resources>
+                    </ContentControl>
+
+                    <!-- Status bar -->
+                    <Border Grid.Row="1" Background="#40000000" BorderBrush="{StaticResource Brush.BorderFaint}"
+                            BorderThickness="0,1,0,0" Margin="0,16,0,0">
+                        <Grid Margin="22,0,14,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="240" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Ellipse Width="7" Height="7" VerticalAlignment="Center"
+                                         Fill="{StaticResource Brush.Accent}"
+                                         Visibility="{Binding Shell.IsBusy, Converter={StaticResource BoolToVisibility}}" />
+                                <TextBlock Text="{Binding Shell.StatusMessage}" VerticalAlignment="Center"
+                                           Margin="9,0,0,0" FontSize="11.5"
+                                           Foreground="{StaticResource Brush.TextSecondary}"
+                                           TextTrimming="CharacterEllipsis" MaxWidth="640" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" VerticalAlignment="Center"
+                                        Visibility="{Binding Shell.IsBusy, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="{Binding Shell.OperationTitle}" Style="{StaticResource Micro}"
+                                           HorizontalAlignment="Right" Margin="0,0,0,3" />
+                                <ProgressBar Style="{StaticResource SlimProgressBar}"
+                                             Value="{Binding Shell.ProgressValue, Mode=OneWay}"
+                                             IsIndeterminate="{Binding Shell.IsProgressIndeterminate, Mode=OneWay}" />
+                            </StackPanel>
+
+                            <Button Grid.Column="2" Content="Cancel" Style="{StaticResource SmallButton}"
+                                    Margin="16,0,0,0" VerticalAlignment="Center"
+                                    Command="{Binding Shell.CancelCommand}"
+                                    Visibility="{Binding Shell.IsBusy, Converter={StaticResource BoolToVisibility}}" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>
