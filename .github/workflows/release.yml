@@ -47,6 +47,19 @@ jobs:
             'FFmpeg: https://ffmpeg.org/download.html  (licensed separately)'
           )
           Set-Content -Path publish/ffmpeg/PUT-FFMPEG-HERE.txt -Value $ffmpegNote
+          New-Item -ItemType Directory -Force -Path publish/steamcmd | Out-Null
+          $steamcmdNote = @(
+            'SteamCMD is optional and is NOT bundled with Wallpaper Studio.'
+            'It is only needed to publish wallpapers to the Steam Workshop.'
+            ''
+            'Download SteamCMD from Valve, place steamcmd.exe in this folder'
+            '(or add it to your PATH, or pick it in the app Settings page), then'
+            'use "Sign in to SteamCMD" once inside the app. Your Steam password is'
+            'entered only in Valve''s own window and is never stored by this app.'
+            ''
+            'SteamCMD: https://developer.valvesoftware.com/wiki/SteamCMD'
+          )
+          Set-Content -Path publish/steamcmd/PUT-STEAMCMD-HERE.txt -Value $steamcmdNote
           Copy-Item README.md publish/README.md -Force
 
       - name: Build zip

@@ -60,6 +60,9 @@ public partial class App : Application
         var exports = new ExportService(_state);
         var wallpaperEngine = new WallpaperEngineLocator();
         var imports = new ImportService(images);
+        var steamCmd = new SteamCmdService();
+        steamCmd.Locate(_settings.Current, out _);
+        var projectBuilder = new WallpaperProjectBuilder(ffmpeg);
         var dialogs = new DialogService();
         var shell = new ShellState();
 
@@ -72,11 +75,14 @@ public partial class App : Application
         var import = new ImportViewModel(
             imports, _settings, wallpaperEngine, thumbnails, dialogs, shell);
 
+        var publish = new PublishViewModel(
+            _settings, _state, steamCmd, projectBuilder, thumbnails, dialogs, shell);
+
         var settings = new SettingsViewModel(
-            _settings, ffmpeg, wallpaperEngine, _state, dialogs, shell);
+            _settings, ffmpeg, wallpaperEngine, steamCmd, _state, dialogs, shell);
 
         var main = new MainViewModel(
-            library, approval, import, settings, shell, _settings, _state, ffmpeg, dialogs);
+            library, approval, import, publish, settings, shell, _settings, _state, ffmpeg, dialogs);
 
         var window = new MainWindow { DataContext = main };
         dialogs.Owner = window;

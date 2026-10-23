@@ -12,6 +12,7 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly SettingsService _settingsService;
     private readonly FfmpegService _ffmpeg;
     private readonly WallpaperEngineLocator _wallpaperEngine;
+    private readonly SteamCmdService _steamCmd;
     private readonly StateStore _state;
     private readonly DialogService _dialogs;
     private readonly ShellState _shell;
@@ -20,6 +21,8 @@ public sealed class SettingsViewModel : ObservableObject
     private string _ffmpegTone = "muted";
     private string _wallpaperEngineStatus = string.Empty;
     private string _wallpaperEngineTone = "muted";
+    private string _steamCmdStatus = string.Empty;
+    private string _steamCmdTone = "muted";
     private string _saveMessage = string.Empty;
     private bool _saveMessageIsError;
 
@@ -27,6 +30,7 @@ public sealed class SettingsViewModel : ObservableObject
         SettingsService settingsService,
         FfmpegService ffmpeg,
         WallpaperEngineLocator wallpaperEngine,
+        SteamCmdService steamCmd,
         StateStore state,
         DialogService dialogs,
         ShellState shell)
@@ -34,6 +38,7 @@ public sealed class SettingsViewModel : ObservableObject
         _settingsService = settingsService;
         _ffmpeg = ffmpeg;
         _wallpaperEngine = wallpaperEngine;
+        _steamCmd = steamCmd;
         _state = state;
         _dialogs = dialogs;
         _shell = shell;
@@ -42,8 +47,10 @@ public sealed class SettingsViewModel : ObservableObject
         BrowseExportCommand = new RelayCommand(BrowseExport);
         BrowseFfmpegCommand = new RelayCommand(BrowseFfmpeg);
         BrowseWallpaperEngineCommand = new RelayCommand(BrowseWallpaperEngine);
+        BrowseSteamCmdCommand = new RelayCommand(BrowseSteamCmd);
         DetectFfmpegCommand = new RelayCommand(DetectFfmpeg);
         DetectWallpaperEngineCommand = new RelayCommand(DetectWallpaperEngine);
+        DetectSteamCmdCommand = new RelayCommand(DetectSteamCmd);
         SaveCommand = new RelayCommand(Save);
         ResetCommand = new RelayCommand(Reset);
         OpenDataFolderCommand = new RelayCommand(() => _dialogs.OpenFolder(AppPaths.DataDirectory));
@@ -170,6 +177,32 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    public string SteamCmdPath
+    {
+        get => Settings.SteamCmdPath;
+        set
+        {
+            if (!string.Equals(Settings.SteamCmdPath, value, StringComparison.Ordinal))
+            {
+                Settings.SteamCmdPath = value ?? string.Empty;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public string SteamUsername
+    {
+        get => Settings.SteamUsername;
+        set
+        {
+            if (!string.Equals(Settings.SteamUsername, value, StringComparison.Ordinal))
+            {
+                Settings.SteamUsername = value ?? string.Empty;
+                OnPropertyChanged();
+            }
+        }
+    }
+
     public bool SkipAlreadyExported
     {
         get => Settings.SkipAlreadyExported;
@@ -220,6 +253,18 @@ public sealed class SettingsViewModel : ObservableObject
         private set => SetProperty(ref _wallpaperEngineTone, value);
     }
 
+    public string SteamCmdStatus
+    {
+        get => _steamCmdStatus;
+        private set => SetProperty(ref _steamCmdStatus, value);
+    }
+
+    public string SteamCmdTone
+    {
+        get => _steamCmdTone;
+        private set => SetProperty(ref _steamCmdTone, value);
+    }
+
     public string SaveMessage
     {
         get => _saveMessage;
@@ -258,8 +303,10 @@ public sealed class SettingsViewModel : ObservableObject
     public ICommand BrowseExportCommand { get; }
     public ICommand BrowseFfmpegCommand { get; }
     public ICommand BrowseWallpaperEngineCommand { get; }
+    public ICommand BrowseSteamCmdCommand { get; }
     public ICommand DetectFfmpegCommand { get; }
     public ICommand DetectWallpaperEngineCommand { get; }
+    public ICommand DetectSteamCmdCommand { get; }
     public ICommand SaveCommand { get; }
     public ICommand ResetCommand { get; }
     public ICommand OpenDataFolderCommand { get; }
@@ -272,7 +319,7 @@ public sealed class SettingsViewModel : ObservableObject
         OnPropertyChanged(
             nameof(Settings), nameof(SourceFolder), nameof(ExportFolder), nameof(JpegQuality), nameof(JpegQualityText),
             nameof(EnforceMinimumResolution), nameof(DefaultFrameTimestampSeconds), nameof(DefaultFrameTimestampText),
-            nameof(FfmpegPath), nameof(WallpaperEnginePath), nameof(SkipAlreadyExported),
+            nameof(FfmpegPath), nameof(WallpaperEnginePath), nameof(SteamCmdPath), nameof(SteamUsername), nameof(SkipAlreadyExported),
             nameof(OpenExportFolderAfterBatch), nameof(DataDirectory), nameof(SettingsFile), nameof(StateFile),
             nameof(PortableModeText), nameof(PortableTone), nameof(StateRecordCount));
         RefreshToolchain();
@@ -302,6 +349,18 @@ public sealed class SettingsViewModel : ObservableObject
         {
             WallpaperEngineStatus = status;
             WallpaperEngineTone = "muted";
+        }
+
+        var steamCmd = _steamCmd.Locate(Settings, out var steamStatus);
+        if (steamCmd is not null)
+        {
+            SteamCmdStatus = "Detected · " + steamCmd;
+            SteamCmdTone = "success";
+        }
+        else
+        {
+            SteamCmdStatus = steamStatus;
+            SteamCmdTone = "muted";
         }
     }
 
@@ -339,6 +398,16 @@ public sealed class SettingsViewModel : ObservableObject
         if (chosen is not null)
         {
             WallpaperEnginePath = chosen;
+            RefreshToolchain();
+        }
+    }
+
+    private void BrowseSteamCmd()
+    {
+        var chosen = _dialogs.PickExecutable("Choose steamcmd.exe", SteamCmdPath);
+        if (chosen is not null)
+        {
+            SteamCmdPath = chosen;
             RefreshToolchain();
         }
     }
@@ -381,6 +450,26 @@ public sealed class SettingsViewModel : ObservableObject
         WallpaperEngineStatus = "Detected · " + executable;
         WallpaperEngineTone = "success";
         _shell.ReportText("Wallpaper Engine detected at " + executable);
+    }
+
+    private void DetectSteamCmd()
+    {
+        var executable = _steamCmd.Locate(Settings, out var status);
+        if (executable is null)
+        {
+            SteamCmdStatus = status;
+            SteamCmdTone = "warning";
+            _dialogs.ShowInfo("SteamCMD not found",
+                "Wallpaper Studio looks beside the app, in a 'steamcmd' subfolder, on PATH, and at C:\\steamcmd.\n\n" +
+                "SteamCMD is Valve's tool and is distributed by Valve; Wallpaper Studio does not bundle or download it. " +
+                "Publishing to the Workshop needs it.");
+            return;
+        }
+
+        SteamCmdPath = executable;
+        SteamCmdStatus = "Detected · " + executable;
+        SteamCmdTone = "success";
+        _shell.ReportText("SteamCMD detected at " + executable);
     }
 
     private void Save()
@@ -429,6 +518,7 @@ public sealed class SettingsViewModel : ObservableObject
         Settings.DefaultFrameTimestampSeconds = 1.0;
         Settings.FfmpegPath = string.Empty;
         Settings.WallpaperEnginePath = string.Empty;
+        Settings.SteamCmdPath = string.Empty;
         Settings.ExportFolder = AppPaths.DefaultExportDirectory;
         Settings.SkipAlreadyExported = true;
         Settings.OpenExportFolderAfterBatch = false;

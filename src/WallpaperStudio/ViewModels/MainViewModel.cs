@@ -21,6 +21,7 @@ public sealed class MainViewModel : ObservableObject
         LibraryViewModel library,
         ApprovalViewModel approval,
         ImportViewModel import,
+        PublishViewModel publish,
         SettingsViewModel settings,
         ShellState shell,
         SettingsService settingsService,
@@ -31,6 +32,7 @@ public sealed class MainViewModel : ObservableObject
         Library = library;
         Approval = approval;
         Import = import;
+        Publish = publish;
         Settings = settings;
         Shell = shell;
         _settingsService = settingsService;
@@ -42,6 +44,7 @@ public sealed class MainViewModel : ObservableObject
         ShowLibraryCommand = new RelayCommand(() => Navigate("library", Library));
         ShowApprovalCommand = new RelayCommand(() => Navigate("approval", Approval));
         ShowImportCommand = new RelayCommand(() => Navigate("import", Import));
+        ShowPublishCommand = new RelayCommand(() => Navigate("publish", Publish));
         ShowSettingsCommand = new RelayCommand(() => Navigate("settings", Settings));
         DismissStartupNoticeCommand = new RelayCommand(() => StartupNotice = null);
         OpenLogFolderCommand = new RelayCommand(Logger.OpenLogFolder);
@@ -57,6 +60,7 @@ public sealed class MainViewModel : ObservableObject
     public LibraryViewModel Library { get; }
     public ApprovalViewModel Approval { get; }
     public ImportViewModel Import { get; }
+    public PublishViewModel Publish { get; }
     public SettingsViewModel Settings { get; }
     public ShellState Shell { get; }
 
@@ -74,7 +78,7 @@ public sealed class MainViewModel : ObservableObject
             if (SetProperty(ref _currentPageKey, value))
             {
                 OnPropertyChanged(
-                    nameof(IsLibraryPage), nameof(IsApprovalPage), nameof(IsImportPage), nameof(IsSettingsPage));
+                    nameof(IsLibraryPage), nameof(IsApprovalPage), nameof(IsImportPage), nameof(IsPublishPage), nameof(IsSettingsPage));
             }
         }
     }
@@ -82,6 +86,7 @@ public sealed class MainViewModel : ObservableObject
     public bool IsLibraryPage => CurrentPageKey == "library";
     public bool IsApprovalPage => CurrentPageKey == "approval";
     public bool IsImportPage => CurrentPageKey == "import";
+    public bool IsPublishPage => CurrentPageKey == "publish";
     public bool IsSettingsPage => CurrentPageKey == "settings";
 
     public string? StartupNotice
@@ -111,6 +116,7 @@ public sealed class MainViewModel : ObservableObject
     public ICommand ShowLibraryCommand { get; }
     public ICommand ShowApprovalCommand { get; }
     public ICommand ShowImportCommand { get; }
+    public ICommand ShowPublishCommand { get; }
     public ICommand ShowSettingsCommand { get; }
     public ICommand DismissStartupNoticeCommand { get; }
     public ICommand OpenLogFolderCommand { get; }
@@ -144,6 +150,7 @@ public sealed class MainViewModel : ObservableObject
         Library.RefreshSettingsBindings();
         Import.RefreshRuleState();
         Approval.RefreshToolchainState();
+        Publish.RefreshSettings();
         _ffmpeg.Locate(_settingsService.Current);
         OnPropertyChanged(nameof(StorageBadge), nameof(StorageTone), nameof(DataLocation));
         Shell.ReportText("Settings saved. Scan again if the source folder changed.");

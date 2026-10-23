@@ -45,6 +45,19 @@ public sealed class DialogService
         return dialog.ShowDialog(Owner) == true ? dialog.FileNames : [];
     }
 
+    public IReadOnlyList<string> PickVideos(string title, bool multiselect = true)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = title,
+            Multiselect = multiselect,
+            CheckFileExists = true,
+            Filter = "Videos|*.mp4;*.webm;*.mkv;*.avi;*.mov;*.m4v|MP4|*.mp4|All files|*.*"
+        };
+
+        return dialog.ShowDialog(Owner) == true ? dialog.FileNames : [];
+    }
+
     public string? PickExecutable(string title, string? initialPath = null)
     {
         var dialog = new OpenFileDialog

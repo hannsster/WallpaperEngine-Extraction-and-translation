@@ -19,6 +19,7 @@ public sealed class StateStore
 
     private readonly object _gate = new();
     private readonly Dictionary<string, ExportRecord> _records = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, PublishRecord> _publishRecords = new(StringComparer.OrdinalIgnoreCase);
 
     public string? LoadWarning { get; private set; }
     public int RecordCount
@@ -32,11 +33,23 @@ public sealed class StateStore
         }
     }
 
+    public int PublishedCount
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _publishRecords.Values.Count(record => !string.IsNullOrWhiteSpace(record.PublishedFileId));
+            }
+        }
+    }
+
     public void Load()
     {
         lock (_gate)
         {
             _records.Clear();
+            _publishRecords.Clear();
             try
             {
                 if (!File.Exists(AppPaths.StateFile))
@@ -62,7 +75,18 @@ public sealed class StateStore
                     _records[key] = record;
                 }
 
-                Logger.Info($"Loaded {_records.Count} state records.");
+                foreach (var record in document.PublishRecords ?? [])
+                {
+                    var key = PathHelper.Normalize(record.ContentFolder);
+                    if (key.Length == 0)
+                    {
+                        continue;
+                    }
+
+                    _publishRecords[key] = record;
+                }
+
+                Logger.Info($"Loaded {_records.Count} state records and {_publishRecords.Count} publish records.");
             }
             catch (Exception ex)
             {
@@ -70,6 +94,7 @@ public sealed class StateStore
                 LoadWarning = "state.json was damaged. It was archived and the library memory starts fresh; existing exports are untouched.";
                 TryArchiveCorrupt();
                 _records.Clear();
+                _publishRecords.Clear();
             }
         }
     }
@@ -157,6 +182,73 @@ public sealed class StateStore
         }
     }
 
+    public PublishRecord? GetPublish(string contentFolder)
+    {
+        if (string.IsNullOrWhiteSpace(contentFolder))
+        {
+            return null;
+        }
+
+        lock (_gate)
+        {
+            return _publishRecords.TryGetValue(PathHelper.Normalize(contentFolder), out var record) ? record : null;
+        }
+    }
+
+    public void RecordPublish(PublishItem item, bool save = true)
+    {
+        lock (_gate)
+        {
+            var record = GetOrCreatePublish(item);
+            record.SourcePath = item.SourcePath;
+            record.Title = item.Title;
+            record.Kind = item.KindLabel;
+            record.Visibility = item.Visibility;
+            record.PublishedFileId = item.PublishedFileId;
+            record.WorkshopUrl = item.WorkshopUrl;
+            record.PublishedDate = DateTimeOffset.Now;
+            record.ErrorMessage = null;
+            if (save)
+            {
+                SaveUnlocked();
+            }
+        }
+    }
+
+    public void RecordPublishFailure(PublishItem item, string? error, bool save = true)
+    {
+        lock (_gate)
+        {
+            var record = GetOrCreatePublish(item);
+            record.SourcePath = item.SourcePath;
+            record.Title = item.Title;
+            record.Kind = item.KindLabel;
+            record.Visibility = item.Visibility;
+            record.ErrorMessage = error;
+            if (save)
+            {
+                SaveUnlocked();
+            }
+        }
+    }
+
+    private PublishRecord GetOrCreatePublish(PublishItem item)
+    {
+        var key = PathHelper.Normalize(item.ContentFolder);
+        if (key.Length == 0)
+        {
+            key = PathHelper.Normalize(item.SourcePath);
+        }
+
+        if (!_publishRecords.TryGetValue(key, out var record))
+        {
+            record = new PublishRecord { ContentFolder = item.ContentFolder, SourcePath = item.SourcePath };
+            _publishRecords[key] = record;
+        }
+
+        return record;
+    }
+
     private ExportRecord GetOrCreate(WallpaperSource source)
     {
         var key = PathHelper.Normalize(source.SourcePath);
@@ -183,6 +275,9 @@ public sealed class StateStore
                 Version = 1,
                 Records = _records.Values
                     .OrderBy(record => record.SourcePath, StringComparer.OrdinalIgnoreCase)
+                    .ToList(),
+                PublishRecords = _publishRecords.Values
+                    .OrderBy(record => record.ContentFolder, StringComparer.OrdinalIgnoreCase)
                     .ToList()
             };
             var json = JsonSerializer.Serialize(document, Options);

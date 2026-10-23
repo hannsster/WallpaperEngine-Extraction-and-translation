@@ -403,7 +403,7 @@
                             CornerRadius="10">
                         <ScrollViewer x:Name="PART_ContentHost"
                                       Margin="{TemplateBinding Padding}"
-                                      VerticalAlignment="Center"
+                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                                       Focusable="False"
                                       HorizontalScrollBarVisibility="Hidden"
                                       VerticalScrollBarVisibility="Hidden" />
@@ -536,6 +536,94 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.4" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- =========================== ComboBox =============================== -->
+    <Style x:Key="ModernComboBox" TargetType="ComboBox">
+        <Setter Property="FontFamily" Value="{StaticResource Font.Ui}" />
+        <Setter Property="FontSize" Value="12.5" />
+        <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+        <Setter Property="Background" Value="#10FFFFFF" />
+        <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderSoft}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="Padding" Value="11,7" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBox">
+                    <Grid>
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="9"
+                                Padding="{TemplateBinding Padding}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter Grid.Column="0"
+                                                  Content="{TemplateBinding SelectionBoxItem}"
+                                                  ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                  VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1" Text="&#xE70D;" FontFamily="{StaticResource Font.Icon}"
+                                           FontSize="10" Foreground="{StaticResource Brush.TextTertiary}"
+                                           VerticalAlignment="Center" Margin="8,0,0,0" />
+                            </Grid>
+                        </Border>
+                        <ToggleButton Background="Transparent" BorderThickness="0" Focusable="False" ClickMode="Press"
+                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="ToggleButton">
+                                    <Border Background="Transparent" />
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+                        <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom"
+                               AllowsTransparency="True" PopupAnimation="Fade" Focusable="False">
+                            <Border Background="#F21A2231" BorderBrush="{StaticResource Brush.BorderStrong}"
+                                    BorderThickness="1" CornerRadius="10" Margin="0,4,0,0" Padding="4"
+                                    MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+                                <ScrollViewer MaxHeight="240">
+                                    <ItemsPresenter />
+                                </ScrollViewer>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
+                        </Trigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="Root" Property="Opacity" Value="0.45" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="ModernComboBoxItem" TargetType="ComboBoxItem">
+        <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+        <Setter Property="Padding" Value="10,7" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ComboBoxItem">
+                    <Border x:Name="Root" Background="Transparent" CornerRadius="7" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="#1FFFFFFF" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Root" Property="Background" Value="{StaticResource Brush.AccentSoft}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

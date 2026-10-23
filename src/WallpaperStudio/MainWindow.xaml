@@ -121,6 +121,10 @@
                                          IsChecked="{Binding IsImportPage, Mode=OneWay}"
                                          Command="{Binding ShowImportCommand}" />
                             <RadioButton Style="{StaticResource NavItem}" GroupName="Nav"
+                                         Tag="&#xE72D;" Content="Publish to Workshop"
+                                         IsChecked="{Binding IsPublishPage, Mode=OneWay}"
+                                         Command="{Binding ShowPublishCommand}" />
+                            <RadioButton Style="{StaticResource NavItem}" GroupName="Nav"
                                          Tag="&#xE713;" Content="Settings"
                                          IsChecked="{Binding IsSettingsPage, Mode=OneWay}"
                                          Command="{Binding ShowSettingsCommand}" />

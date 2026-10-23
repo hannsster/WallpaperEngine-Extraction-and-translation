@@ -17,6 +17,7 @@ public static class AppPaths
     public static string CacheDirectory => Path.Combine(DataDirectory, "cache");
     public static string ThumbnailCacheDirectory => Path.Combine(CacheDirectory, "thumbs");
     public static string FrameCacheDirectory => Path.Combine(CacheDirectory, "frames");
+    public static string PublishDirectory => Path.Combine(DataDirectory, "publish");
     public static string DefaultExportDirectory { get; private set; } = string.Empty;
     public static bool PortableMode { get; private set; }
 
@@ -54,6 +55,7 @@ public static class AppPaths
         Directory.CreateDirectory(CacheDirectory);
         Directory.CreateDirectory(ThumbnailCacheDirectory);
         Directory.CreateDirectory(FrameCacheDirectory);
+        Directory.CreateDirectory(PublishDirectory);
     }
 
     private static bool TryPrepareWritableDirectory(string directory)

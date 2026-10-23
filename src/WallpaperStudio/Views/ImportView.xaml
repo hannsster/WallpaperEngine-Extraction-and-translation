@@ -67,7 +67,7 @@
                     </Border>
                     <StackPanel Grid.Column="1" Margin="11,0,0,0">
                         <TextBlock Text="Manual, safe import" FontSize="13" FontWeight="SemiBold" />
-                        <TextBlock Text="Wallpaper Engine has no documented CLI import or Workshop publish API. Staging copies files to a folder and writes instructions; you import them in the app yourself."
+                        <TextBlock Text="Wallpaper Engine has no documented CLI import. Staging copies files to a folder and writes instructions; publishing to the Workshop is opt-in and handled on the Publish screen through Valve's SteamCMD."
                                    Style="{StaticResource Caption}" Margin="0,3,0,0" />
                     </StackPanel>
                 </Grid>

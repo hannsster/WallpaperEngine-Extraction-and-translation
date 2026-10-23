@@ -9,6 +9,8 @@ public sealed class AppSettings
     public double DefaultFrameTimestampSeconds { get; set; } = 1.0;
     public string FfmpegPath { get; set; } = string.Empty;
     public string WallpaperEnginePath { get; set; } = string.Empty;
+    public string SteamCmdPath { get; set; } = string.Empty;
+    public string SteamUsername { get; set; } = string.Empty;
     public bool SkipAlreadyExported { get; set; } = true;
     public bool OpenExportFolderAfterBatch { get; set; }
 
@@ -20,5 +22,7 @@ public sealed class AppSettings
         ExportFolder ??= string.Empty;
         FfmpegPath ??= string.Empty;
         WallpaperEnginePath ??= string.Empty;
+        SteamCmdPath ??= string.Empty;
+        SteamUsername = (SteamUsername ?? string.Empty).Trim();
     }
 }

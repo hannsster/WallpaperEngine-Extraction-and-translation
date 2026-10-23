@@ -145,7 +145,6 @@
                                     <TextBlock Text="Tool discovery" Style="{StaticResource SectionTitle}" Margin="9,0,0,0" />
                                 </StackPanel>
                                 <TextBlock Text="Both tools are optional. No Steam credentials are read or stored." Style="{StaticResource Caption}" Margin="0,0,0,12" />
-
                                 <TextBlock Text="FFMPEG (FOLDER OR EXE)" Style="{StaticResource Micro}" />
                                 <Grid Margin="0,6,0,0">
                                     <Grid.ColumnDefinitions>
@@ -201,6 +200,52 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- Workshop publishing -->
+                        <Border Style="{StaticResource RaisedCard}" Padding="18,16" Margin="0,0,0,14">
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <TextBlock Text="&#xE72D;" FontFamily="{StaticResource Font.Icon}" FontSize="15"
+                                               Foreground="{StaticResource Brush.Accent}" VerticalAlignment="Center" />
+                                    <TextBlock Text="Workshop publishing" Style="{StaticResource SectionTitle}" Margin="9,0,0,0" />
+                                </StackPanel>
+                                <TextBlock Text="Optional. Uploading uses Valve's SteamCMD and is private by default. Steam passwords and Steam Guard codes are never entered or stored here." Style="{StaticResource Caption}" Margin="0,0,0,12" />
+
+                                <TextBlock Text="STEAMCMD (STEAMCMD.EXE)" Style="{StaticResource Micro}" />
+                                <Grid Margin="0,6,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox Style="{StaticResource ModernTextBox}" Text="{Binding SteamCmdPath, UpdateSourceTrigger=PropertyChanged}" />
+                                    <Button Grid.Column="1" Style="{StaticResource SmallButton}" Content="Browse" Margin="6,0,0,0" Command="{Binding BrowseSteamCmdCommand}" />
+                                </Grid>
+                                <Grid Margin="0,7,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <Border Style="{StaticResource Chip}" HorizontalAlignment="Left"
+                                            Background="{Binding SteamCmdTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                                            BorderBrush="{Binding SteamCmdTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+                                        <TextBlock Text="{Binding SteamCmdStatus}" Style="{StaticResource ChipText}"
+                                                   Foreground="{Binding SteamCmdTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}"
+                                                   TextTrimming="CharacterEllipsis" MaxWidth="300" />
+                                    </Border>
+                                    <Button Grid.Column="1" Style="{StaticResource SmallButton}" Content="Detect" Command="{Binding DetectSteamCmdCommand}" />
+                                </Grid>
+
+                                <TextBlock Text="STEAM ACCOUNT NAME" Style="{StaticResource Micro}" Margin="0,12,0,0" />
+                                <TextBox Style="{StaticResource ModernTextBox}" Margin="0,6,0,0"
+                                         Text="{Binding SteamUsername, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Only the account name. Never enter your password here." />
+                                <TextBlock Text="Just the account name, so uploads can reuse the SteamCMD session you created with Sign in. Wallpaper Studio has no password field by design."
+                                           Style="{StaticResource Micro}" Margin="0,6,0,0" />
+
+                                <TextBlock Text="SteamCMD and Steam are Valve's tools and are distributed by Valve under Valve's terms. Wallpaper Studio never bundles or downloads them, and only uploads items you explicitly publish."
+                                           Style="{StaticResource Micro}" Margin="0,11,0,0" />
+                            </StackPanel>
+                        </Border>
+
                         <!-- Behaviour -->
                         <Border Style="{StaticResource RaisedCard}" Padding="18,16" Margin="0,0,0,14">
                             <StackPanel>
@@ -246,7 +291,7 @@
                                     <Button Style="{StaticResource SmallButton}" Content="Open logs" Command="{Binding OpenLogFolderCommand}" />
                                 </StackPanel>
 
-                                <TextBlock Text="Wallpaper Studio only reads local wallpaper files you select. It does not contact Steam, Wallpaper Engine, or any network service."
+                                <TextBlock Text="Wallpaper Studio only reads local wallpaper files you select. It stays offline until you press Publish on the Workshop screen, which runs Valve's own SteamCMD."
                                            Style="{StaticResource Micro}" Margin="0,12,0,0" />
                             </StackPanel>
                         </Border>

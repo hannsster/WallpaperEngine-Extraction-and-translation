@@ -18,6 +18,9 @@
             <DataTemplate DataType="{x:Type vm:ImportViewModel}">
                 <views:ImportView />
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:PublishViewModel}">
+                <views:PublishView />
+            </DataTemplate>
             <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
                 <views:SettingsView />
             </DataTemplate>

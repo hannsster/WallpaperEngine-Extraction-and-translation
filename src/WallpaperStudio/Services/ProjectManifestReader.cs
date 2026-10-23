@@ -70,4 +70,55 @@ public static class ProjectManifestReader
 
         return null;
     }
+
+    /// <summary>
+    /// Reads the optional workshop id from an existing project.json. The value is
+    /// documented as a string but sometimes appears as a number, so both are accepted.
+    /// </summary>
+    public static bool TryReadWorkshopId(string projectJsonPath, out string? workshopId)
+    {
+        workshopId = null;
+        try
+        {
+            var json = File.ReadAllText(PathHelper.ToExtendedPath(projectJsonPath));
+            using var document = JsonDocument.Parse(json, new JsonDocumentOptions
+            {
+                AllowTrailingCommas = true,
+                CommentHandling = JsonCommentHandling.Skip
+            });
+
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                return false;
+            }
+
+            foreach (var property in document.RootElement.EnumerateObject())
+            {
+                if (!string.Equals(property.Name, "workshopid", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var value = property.Value.ValueKind switch
+                {
+                    JsonValueKind.String => property.Value.GetString(),
+                    JsonValueKind.Number => property.Value.GetRawText(),
+                    _ => null
+                };
+
+                if (!string.IsNullOrWhiteSpace(value) && value != "0")
+                {
+                    workshopId = value.Trim();
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Logger.Debug($"Could not read workshopid from '{projectJsonPath}': {ex.Message}");
+            return false;
+        }
+    }
 }

@@ -43,6 +43,9 @@ public sealed class ShellState : ObservableObject
 
     public bool IsIdle => !IsBusy;
 
+    /// <summary>True once the current operation has been asked to cancel.</summary>
+    public bool IsCancellationRequested => _operationCts?.IsCancellationRequested == true;
+
     public bool IsProgressIndeterminate
     {
         get => _isIndeterminate;

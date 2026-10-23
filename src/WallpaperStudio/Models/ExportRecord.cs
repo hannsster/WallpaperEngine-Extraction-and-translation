@@ -30,4 +30,5 @@ public sealed class StateDocument
 {
     public int Version { get; set; } = 1;
     public List<ExportRecord> Records { get; set; } = [];
+    public List<PublishRecord> PublishRecords { get; set; } = [];
 }
