@@ -116,7 +116,7 @@
                 </Border>
 
                 <!-- Details -->
-                <Border Style="{StaticResource GlassCard}" Padding="0">
+                <Border Grid.Column="1" Style="{StaticResource GlassCard}" Padding="0">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="18,16,14,16">
                         <StackPanel>
                             <!-- Fallback notice -->
