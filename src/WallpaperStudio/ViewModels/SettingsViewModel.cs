@@ -203,6 +203,19 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    public bool AutoApproveScenes
+    {
+        get => Settings.AutoApproveScenes;
+        set
+        {
+            if (Settings.AutoApproveScenes != value)
+            {
+                Settings.AutoApproveScenes = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
     public bool SkipAlreadyExported
     {
         get => Settings.SkipAlreadyExported;
@@ -320,7 +333,7 @@ public sealed class SettingsViewModel : ObservableObject
             nameof(Settings), nameof(SourceFolder), nameof(ExportFolder), nameof(JpegQuality), nameof(JpegQualityText),
             nameof(EnforceMinimumResolution), nameof(DefaultFrameTimestampSeconds), nameof(DefaultFrameTimestampText),
             nameof(FfmpegPath), nameof(WallpaperEnginePath), nameof(SteamCmdPath), nameof(SteamUsername), nameof(SkipAlreadyExported),
-            nameof(OpenExportFolderAfterBatch), nameof(DataDirectory), nameof(SettingsFile), nameof(StateFile),
+            nameof(OpenExportFolderAfterBatch), nameof(AutoApproveScenes), nameof(DataDirectory), nameof(SettingsFile), nameof(StateFile),
             nameof(PortableModeText), nameof(PortableTone), nameof(StateRecordCount));
         RefreshToolchain();
     }
@@ -522,6 +535,7 @@ public sealed class SettingsViewModel : ObservableObject
         Settings.ExportFolder = AppPaths.DefaultExportDirectory;
         Settings.SkipAlreadyExported = true;
         Settings.OpenExportFolderAfterBatch = false;
+        Settings.AutoApproveScenes = true;
         Settings.SourceFolder = source;
 
         try

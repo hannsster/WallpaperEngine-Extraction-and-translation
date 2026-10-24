@@ -257,6 +257,9 @@
                                 <CheckBox Style="{StaticResource Switch}" Content="Skip unchanged exports" IsChecked="{Binding SkipAlreadyExported}" />
                                 <TextBlock Text="A source is skipped only when its fingerprint and last-modified time still match. The per-batch override in the library can force a re-export."
                                            Style="{StaticResource Micro}" Margin="53,5,0,12" />
+                                <CheckBox Style="{StaticResource Switch}" Content="Auto-approve extracted scene frames" IsChecked="{Binding AutoApproveScenes}" />
+                                <TextBlock Text="Scenes that resolve to full resolution are exported without a manual step. Scenes below 1080p, frames that come out nearly all black, and every video still need your approval."
+                                           Style="{StaticResource Micro}" Margin="53,5,0,12" />
                                 <CheckBox Style="{StaticResource Switch}" Content="Open export folder after a batch" IsChecked="{Binding OpenExportFolderAfterBatch}" />
                                 <TextBlock Text="Useful when you want to copy the JPEGs to a tablet immediately."
                                            Style="{StaticResource Micro}" Margin="53,5,0,0" />

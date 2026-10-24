@@ -14,6 +14,7 @@ public sealed class ApprovalViewModel : ObservableObject
     private readonly FfmpegService _ffmpeg;
     private readonly ThumbnailService _thumbnails;
     private readonly PkgPreviewExtractor _pkgPreviews;
+    private readonly SceneFrameExtractor _sceneFrames;
     private readonly StateStore _state;
     private readonly SettingsService _settingsService;
     private readonly DialogService _dialogs;
@@ -36,6 +37,7 @@ public sealed class ApprovalViewModel : ObservableObject
         FfmpegService ffmpeg,
         ThumbnailService thumbnails,
         PkgPreviewExtractor pkgPreviews,
+        SceneFrameExtractor sceneFrames,
         StateStore state,
         SettingsService settingsService,
         DialogService dialogs,
@@ -44,6 +46,7 @@ public sealed class ApprovalViewModel : ObservableObject
         _ffmpeg = ffmpeg;
         _thumbnails = thumbnails;
         _pkgPreviews = pkgPreviews;
+        _sceneFrames = sceneFrames;
         _state = state;
         _settingsService = settingsService;
         _dialogs = dialogs;
@@ -262,10 +265,20 @@ public sealed class ApprovalViewModel : ObservableObject
     private async Task LoadPreviewAsync(WallpaperSource item, CancellationToken token, bool autoExtract)
     {
         var existing = item.HasCandidate ? item.CandidateFramePath : null;
-        if (existing is not null)
+        if (existing is not null && (!item.UsesPreviewFallback || item.ApprovalStatus == ApprovalStatus.Approved))
         {
             await ShowPreviewAsync(existing, token);
             return;
+        }
+
+        // Scenes are decoded from their package so review shows the real image.
+        if (item.Kind == WallpaperKind.SceneProject && autoExtract)
+        {
+            await ExtractSceneAsync(item, token);
+            if (HasPreview)
+            {
+                return;
+            }
         }
 
         // Scene/project sources may only have a preview asset.
@@ -286,9 +299,64 @@ public sealed class ApprovalViewModel : ObservableObject
         PreviewImage = null;
         PreviewPath = null;
         Notice = item.Kind == WallpaperKind.SceneProject
-            ? "No preview asset was found. Use \"Find embedded preview\" or choose an image manually."
+            ? "No image could be extracted from this scene package. Use \"Find embedded preview\" or choose an image manually."
             : "No preview is available yet. Choose an image to use as the exported frame.";
         RaiseCommandStates();
+    }
+
+    private async Task ExtractSceneAsync(WallpaperSource item, CancellationToken token)
+    {
+        IsExtracting = true;
+        IsBusy = true;
+        BusyMessage = "Extracting the full-resolution scene image…";
+        _shell.ReportText("Extracting the scene image…");
+        try
+        {
+            var result = await _sceneFrames.ExtractAsync(item, token);
+            if (result is null)
+            {
+                Notice = "No image could be extracted from this scene package. Use \"Find embedded preview\" or choose an image manually.";
+                return;
+            }
+
+            item.CandidateFramePath = result.Path;
+            item.UsesPreviewFallback = false;
+            if (result.Resolution.IsKnown)
+            {
+                item.Resolution = result.Resolution;
+            }
+
+            if (result.IsAllBlack)
+            {
+                Notice = "The extracted scene image is almost entirely black. It needs your explicit approval before it can be exported.";
+            }
+            else if (result.LayerCount > 1)
+            {
+                Notice = $"Extracted {result.Resolution.Display} from {result.LayerCount} composited layers.";
+            }
+            else
+            {
+                Notice = null;
+            }
+
+            await ShowPreviewAsync(result.Path, token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Navigation cancels the previous load; nothing to report.
+        }
+        catch (Exception ex)
+        {
+            Notice = "The scene image could not be extracted. The package may be unreadable or use an unsupported texture format.";
+            Logger.Error($"Scene extraction failed for '{item.SourcePath}'.", ex);
+        }
+        finally
+        {
+            IsExtracting = false;
+            IsBusy = false;
+            BusyMessage = string.Empty;
+            RaiseCommandStates();
+        }
     }
 
     private async Task RegenerateAsync()
@@ -501,28 +569,48 @@ public sealed class ApprovalViewModel : ObservableObject
         }
 
         IsBusy = true;
-        BusyMessage = "Scanning the package for a safe embedded preview…";
+        BusyMessage = "Extracting the scene image from the package…";
         try
         {
-            var extracted = await _pkgPreviews.TryExtractAsync(Item.PrimaryFilePath, _loadCts?.Token ?? CancellationToken.None);
+            var token = _loadCts?.Token ?? CancellationToken.None;
+
+            var scene = await _sceneFrames.ExtractAsync(Item, token);
+            if (scene is not null)
+            {
+                Item.CandidateFramePath = scene.Path;
+                Item.UsesPreviewFallback = false;
+                if (scene.Resolution.IsKnown)
+                {
+                    Item.Resolution = scene.Resolution;
+                }
+
+                await ShowPreviewAsync(scene.Path, token);
+                Notice = scene.IsAllBlack
+                    ? "The extracted scene image is almost entirely black. Approve it only if it honestly looks right."
+                    : $"Extracted the full-resolution scene image ({scene.Resolution.Display}).";
+                return;
+            }
+
+            BusyMessage = "Scanning the package for a safe embedded preview…";
+            var extracted = await _pkgPreviews.TryExtractAsync(Item.PrimaryFilePath, token);
             if (extracted is null)
             {
-                Notice = "No safe embedded preview was found. The package may not contain a plain image, or its format is protected. Choose an image manually or mark it unsupported.";
-                _dialogs.ShowInfo("No embedded preview found",
-                    "Wallpaper Studio only accepts plain JPEG/PNG streams that decode cleanly. It does not unpack or reverse-engineer .pkg scene data.");
+                Notice = "No image could be extracted from this package, and no safe embedded preview was found. The format may be protected. Choose an image manually or toss this source.";
+                _dialogs.ShowInfo("No image found",
+                    "Wallpaper Studio could not decode the scene textures or find a plain JPEG/PNG stream that decodes cleanly. Choose an image manually, or toss the source.");
                 return;
             }
 
             Item.PreviewPath = extracted;
             Item.CandidateFramePath = extracted;
             Item.UsesPreviewFallback = true;
-            var resolution = await _thumbnails.Probe.IdentifyAsync(extracted, _loadCts?.Token ?? CancellationToken.None);
+            var resolution = await _thumbnails.Probe.IdentifyAsync(extracted, token);
             if (resolution.IsKnown)
             {
                 Item.Resolution = resolution;
             }
 
-            await ShowPreviewAsync(extracted, _loadCts?.Token ?? CancellationToken.None);
+            await ShowPreviewAsync(extracted, token);
             Notice = "Found a validated embedded preview. It is labelled as a fallback; approve it only if the image looks right.";
         }
         catch (OperationCanceledException)

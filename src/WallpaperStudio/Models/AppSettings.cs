@@ -13,6 +13,7 @@ public sealed class AppSettings
     public string SteamUsername { get; set; } = string.Empty;
     public bool SkipAlreadyExported { get; set; } = true;
     public bool OpenExportFolderAfterBatch { get; set; }
+    public bool AutoApproveScenes { get; set; } = true;
 
     public void Normalize()
     {

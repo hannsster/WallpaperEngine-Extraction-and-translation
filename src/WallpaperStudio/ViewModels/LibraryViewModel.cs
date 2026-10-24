@@ -15,6 +15,7 @@ public sealed class LibraryViewModel : ObservableObject
     private readonly ExportService _exports;
     private readonly FfmpegService _ffmpeg;
     private readonly PkgPreviewExtractor _pkgPreviews;
+    private readonly SceneFrameExtractor _sceneFrames;
     private readonly DialogService _dialogs;
     private readonly ShellState _shell;
     private readonly AsyncRelayCommand _scanCommand;
@@ -34,6 +35,7 @@ public sealed class LibraryViewModel : ObservableObject
         ExportService exports,
         FfmpegService ffmpeg,
         PkgPreviewExtractor pkgPreviews,
+        SceneFrameExtractor sceneFrames,
         DialogService dialogs,
         ShellState shell)
     {
@@ -45,6 +47,7 @@ public sealed class LibraryViewModel : ObservableObject
         _exports = exports;
         _ffmpeg = ffmpeg;
         _pkgPreviews = pkgPreviews;
+        _sceneFrames = sceneFrames;
         _dialogs = dialogs;
         _shell = shell;
 
@@ -346,14 +349,29 @@ public sealed class LibraryViewModel : ObservableObject
         }
 
         var matches = record.Matches(source.FileHash, source.LastModified);
+        if (matches &&
+            record.ExportStatus == ExportStatus.Exported &&
+            source.Resolution.IsKnown &&
+            !string.IsNullOrWhiteSpace(record.Resolution) &&
+            !string.Equals(record.Resolution, source.Resolution.Display, StringComparison.Ordinal))
+        {
+            // The same source now yields a different resolution (for example a scene
+            // that used its small preview before full-resolution extraction existed).
+            // Treat it as stale so a re-export captures the real image.
+            matches = false;
+            source.ErrorMessage = $"This source now yields {source.Resolution.Display} (previously {record.Resolution}). Export it again for full resolution.";
+        }
+
         if (!matches)
         {
             if (record.ExportStatus == ExportStatus.Exported)
             {
-                source.ErrorMessage = "The source changed since it was last exported. Review/export it again.";
+                source.ErrorMessage ??= "The source changed since it was last exported. Review/export it again.";
             }
 
-            if (source.RequiresApproval)
+            // Keep an explicit approval (for example an auto-approved scene) so a
+            // stale-but-still-valid source is simply re-exported at the new size.
+            if (source.RequiresApproval && source.ApprovalStatus != ApprovalStatus.Approved)
             {
                 source.ApprovalStatus = ApprovalStatus.Pending;
                 source.CandidateFrameTime = Settings.DefaultFrameTimestampSeconds;
@@ -422,6 +440,7 @@ public sealed class LibraryViewModel : ObservableObject
         var token = _shell.Begin($"Exporting {candidates.Count:N0} wallpaper(s)…");
         var exported = 0;
         var failed = 0;
+        var skipped = 0;
         var cancelled = false;
 
         try
@@ -446,6 +465,17 @@ public sealed class LibraryViewModel : ObservableObject
                 {
                     throw;
                 }
+                catch (ExportException ex)
+                {
+                    // A source that needs a manual decision (an all-black frame or a
+                    // low-resolution fallback) is skipped, not counted as a failure.
+                    skipped++;
+                    item.ErrorMessage = ex.Message;
+                    if (item.Status != SourceStatus.Error)
+                    {
+                        item.Status = SourceStatus.NeedsReview;
+                    }
+                }
                 catch (Exception ex)
                 {
                     failed++;
@@ -466,9 +496,18 @@ public sealed class LibraryViewModel : ObservableObject
 
             UpdateCounts();
             WallpaperView.Refresh();
-            _shell.Complete(failed == 0
-                ? $"Exported {exported:N0} wallpaper(s)."
-                : $"Exported {exported:N0}; {failed:N0} failed. See the log for details.");
+            var summary = $"Exported {exported:N0} wallpaper(s).";
+            if (skipped > 0)
+            {
+                summary += $" {skipped:N0} need review.";
+            }
+
+            if (failed > 0)
+            {
+                summary += $" {failed:N0} failed. See the log for details.";
+            }
+
+            _shell.Complete(summary);
 
             if (Settings.OpenExportFolderAfterBatch && exported > 0)
             {
@@ -528,6 +567,13 @@ public sealed class LibraryViewModel : ObservableObject
         {
             _shell.Complete("Export cancelled.");
         }
+        catch (ExportException ex)
+        {
+            item.ErrorMessage = ex.Message;
+            _shell.ResetOperation();
+            _dialogs.ShowInfo("This source needs review", ex.Message);
+            RequestReview(item);
+        }
         catch (Exception ex)
         {
             item.Status = SourceStatus.Error;
@@ -542,6 +588,7 @@ public sealed class LibraryViewModel : ObservableObject
         if (item.Kind == WallpaperKind.ImageWallpaper)
         {
             item.CandidateFramePath = item.PrimaryFilePath;
+            item.UsesPreviewFallback = false;
             return;
         }
 
@@ -563,7 +610,57 @@ public sealed class LibraryViewModel : ObservableObject
             var result = await _ffmpeg.ExtractFrameAsync(item.PrimaryFilePath, time, output, token);
             item.CandidateFramePath = result.Path;
             item.CandidateFrameTime = result.TimeSeconds;
+            item.UsesPreviewFallback = false;
             return;
+        }
+
+        if (item.Kind == WallpaperKind.SceneProject)
+        {
+            // Reuse an existing frame once it is extracted, or once the user has
+            // explicitly approved a fallback image.
+            if (item.HasCandidate && (!item.UsesPreviewFallback || item.ApprovalStatus == ApprovalStatus.Approved))
+            {
+                return;
+            }
+
+            var extracted = await _sceneFrames.ExtractAsync(item, token);
+            if (extracted is not null)
+            {
+                item.CandidateFramePath = extracted.Path;
+                item.UsesPreviewFallback = false;
+                if (extracted.Resolution.IsKnown)
+                {
+                    item.Resolution = extracted.Resolution;
+                }
+
+                if (extracted.IsAllBlack)
+                {
+                    item.ApprovalStatus = ApprovalStatus.Pending;
+                    item.Status = SourceStatus.NeedsReview;
+                    item.ErrorMessage = "The extracted scene image is almost entirely black, so it needs a manual look before it can be exported.";
+                    throw new ExportException(item.ErrorMessage);
+                }
+
+                return;
+            }
+
+            // No scene image could be extracted: fall back to the preview, but a
+            // low-resolution fallback always needs explicit approval.
+            if (!string.IsNullOrWhiteSpace(item.PreviewPath) &&
+                File.Exists(PathHelper.ToExtendedPath(item.PreviewPath)))
+            {
+                item.CandidateFramePath = item.PreviewPath;
+                item.UsesPreviewFallback = true;
+                if (item.ApprovalStatus != ApprovalStatus.Approved)
+                {
+                    item.ApprovalStatus = ApprovalStatus.Pending;
+                    item.Status = SourceStatus.NeedsReview;
+                    throw new ExportException(
+                        "Full-resolution extraction was not possible for this scene, so only its low-resolution preview is available. Review and approve it if you still want to export it.");
+                }
+
+                return;
+            }
         }
 
         if (item.HasCandidate)

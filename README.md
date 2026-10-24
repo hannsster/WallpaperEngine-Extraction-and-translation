@@ -25,8 +25,8 @@ Grab the latest portable build from the [**Releases**](../../releases) page:
 - Builds a thumbnail library with deduplication and persistent state.
 - Exports approved sources as JPEG at a configurable quality (default 90).
 - Extracts a frame from a video with FFmpeg at a chosen timestamp.
-- Finds a **plain, validated JPEG/PNG preview** inside a scene package when no sibling preview exists. This is a conservative signature scan, not scene decompilation.
-- Requires an explicit review/approval step before any video or scene is exported.
+- Extracts a **full-resolution static image from scene packages**: it follows the package's own `scene.json` → model → material → texture chain and decodes the referenced textures in-process (embedded JPEG/PNG, or raw/BC1/BC2/BC3/RGBA GPU data, including LZ4-compressed mips). A plain, validated JPEG/PNG preview inside the package is used as a clearly-labelled fallback only when extraction is not possible.
+- Auto-approves clean sources for export: images, and scenes whose real image resolves to at least 1080p. An explicit review/approval step is required before exporting a **video**, a **sub-1080p scene**, or a scene frame that comes out **nearly all black**.
 - Provides an import queue with a 1080p gate and a manual staging workflow.
 - Publishes wallpapers you choose to the Steam Workshop through Valve's SteamCMD:
   - uploads existing `project.json` project folders as-is, updating the item when the manifest already has a `workshopid`;
@@ -84,9 +84,9 @@ The publish folder contains `WallpaperStudio.exe`. Keep `WallpaperStudioData/` a
 3. For images, press **Export JPEG**.
 4. For videos and scenes, press **Review frame**:
    - videos use FFmpeg to render the chosen timestamp;
-   - scenes use the project preview, a sibling `preview.*`, or a validated embedded preview;
-   - the candidate is labelled as a fallback when applicable;
-   - **Approve this frame** before export.
+   - scenes are decoded to their **full resolution** from the package's own textures; use **Re-extract scene image** to refresh one;
+   - if extraction is not possible, the project preview, a sibling `preview.*`, or a validated embedded preview is used and labelled as a fallback;
+   - scenes that resolve to at least 1080p are auto-approved by default (toggle **Auto-approve extracted scene frames** in Settings). Sub-1080p scenes, videos, all-black frames and low-resolution fallbacks still need **Approve this frame** before export.
 5. Use the **Import queue** to prepare images for Wallpaper Engine:
    - add images or a whole folder;
    - the 1080p rule requires a long edge of at least 1920 **and** a short edge of at least 1080;
@@ -139,13 +139,13 @@ Otherwise the same structure is created under `%LOCALAPPDATA%\WallpaperStudio`. 
 
 ## Safety and limitations
 
-- **No scene rendering.** Wallpaper Engine scene formats are not publicly documented. For protected packages the app offers the project preview or a plain embedded image only.
+- **Scene extraction is best-effort, not a renderer.** Static images are decoded from the package's own asset chain (scene → model → material → texture). Effects, shaders, particles and animation are not simulated, and small overlays or non-full-frame elements are generally omitted, so the result is a faithful but simplified still. Every extracted frame is validated, including an all-black check, and can be re-reviewed with **Re-extract scene image**.
 - **No DRM or protection bypass.** Unsupported or protected packages are marked unsupported.
 - **No Steam credentials** are ever requested, read or stored. Sign-in happens inside Valve's own SteamCMD window; Wallpaper Studio launches that window and never sees your password or Steam Guard code.
 - **Publishing is explicit and opt-in.** Nothing is uploaded until you press **Publish**. New items upload as **Private** by default and are visible only to your account.
 - **No faked successes.** An item is marked Published only when SteamCMD writes a new, non-zero `publishedfileid` back into its script; SteamCMD's own output and any errors are shown verbatim.
 - **Image → scene generation is experimental.** It writes a minimal, unencrypted scene using a texture container reconstructed from a public open-source reader, not an official specification. Open the built folder in Wallpaper Engine and confirm it renders before sharing.
-- **No guarantee of preview quality.** A scene's preview may be a static thumbnail rather than a full-resolution frame. The UI labels these candidates.
+- **Composition is approximate.** A scene is flattened by stacking its full-frame image layers bottom-to-top on black. The scene is shown at the resolution its own projection declares (for example 3840×2160), not the thumbnail size.
 - Video frames depend on the installed FFmpeg build and its codec support.
 - Wallpaper Engine import remains a manual workflow because the application exposes no documented CLI/import API. Uploading is likewise left to Valve's SteamCMD rather than any invented API.
 - Respect creators' rights. Do not redistribute or publish content you do not own or license.
@@ -163,6 +163,12 @@ src/WallpaperStudio/
     ProjectManifestReader.cs     Safe top-level project.json hints
     PreviewResolver.cs           Sibling/embedded preview discovery
     PkgPreviewExtractor.cs       Conservative embedded JPEG/PNG scan
+    SceneFrameExtractor.cs       Full-resolution scene → image extraction
+    PkgArchive.cs                Read-only PKGV package index reader
+    TexDecoder.cs                Read-only TEXB texture header/decoder
+    BlockTextureDecoder.cs       BC1/BC2/BC3/RGBA8/RG8/R8 → RGBA
+    Lz4BlockDecoder.cs           LZ4 block decompression for texture mips
+    FrameAnalyzer.cs             All-black frame detection
     FfmpegService.cs             Locate FFmpeg, probe media, extract frames
     ImageService.cs              SkiaSharp probing and thumbnail cache
     SkiaImage.cs                 Decode, EXIF orientation, resize, JPEG encode

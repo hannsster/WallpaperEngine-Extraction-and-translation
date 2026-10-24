@@ -55,7 +55,8 @@ public partial class App : Application
 
         var thumbnails = new ThumbnailService();
         var pkgPreviews = new PkgPreviewExtractor();
-        var scanner = new SourceScanner(images, ffmpeg);
+        var sceneFrames = new SceneFrameExtractor();
+        var scanner = new SourceScanner(images, ffmpeg, sceneFrames);
         var hashing = new HashingService();
         var exports = new ExportService(_state);
         var wallpaperEngine = new WallpaperEngineLocator();
@@ -67,10 +68,10 @@ public partial class App : Application
         var shell = new ShellState();
 
         var library = new LibraryViewModel(
-            _settings, _state, scanner, hashing, thumbnails, exports, ffmpeg, pkgPreviews, dialogs, shell);
+            _settings, _state, scanner, hashing, thumbnails, exports, ffmpeg, pkgPreviews, sceneFrames, dialogs, shell);
 
         var approval = new ApprovalViewModel(
-            ffmpeg, thumbnails, pkgPreviews, _state, _settings, dialogs, shell);
+            ffmpeg, thumbnails, pkgPreviews, sceneFrames, _state, _settings, dialogs, shell);
 
         var import = new ImportViewModel(
             imports, _settings, wallpaperEngine, thumbnails, dialogs, shell);

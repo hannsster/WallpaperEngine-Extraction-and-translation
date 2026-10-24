@@ -273,10 +273,17 @@ public sealed class WallpaperSource : ObservableObject
     public bool HasPreviewFallbackNotice => UsesPreviewFallback;
 
     public string PreviewFallbackNotice => Kind == WallpaperKind.SceneProject
-        ? "Scene rendering is unavailable. This app uses the project preview image as a clearly-labelled fallback. Review it before exporting."
+        ? "The full-resolution scene image could not be extracted, so this low-resolution project preview is used instead. Review it before exporting."
         : "No safe renderer is available for this source. A preview/fallback image is used instead. Review it before exporting.";
 
-    public string CandidateSourceLabel => UsesPreviewFallback ? "Preview / fallback" : Kind == WallpaperKind.VideoWallpaper ? "Extracted video frame" : "Source image";
+    public string CandidateSourceLabel => UsesPreviewFallback
+        ? "Preview / fallback"
+        : Kind switch
+        {
+            WallpaperKind.VideoWallpaper => "Extracted video frame",
+            WallpaperKind.SceneProject => "Extracted scene image",
+            _ => "Source image"
+        };
 
     public string ExportPathDisplay => string.IsNullOrWhiteSpace(ExportPath) ? string.Empty : PathHelper.Ellipsize(ExportPath, 100);
 

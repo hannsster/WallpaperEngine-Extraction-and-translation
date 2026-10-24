@@ -16,18 +16,20 @@ public sealed class ScanResult
 /// <summary>
 /// Recursively detects Wallpaper Engine projects, scene packages, loose videos
 /// and loose images. Detection is conservative: a project.json is parsed only
-/// for its documented top-level hints, and unrecognised packages are marked
-/// unsupported instead of being reverse engineered.
+/// for its documented top-level hints, and a package whose assets cannot be read
+/// is marked unsupported rather than guessed at.
 /// </summary>
 public sealed class SourceScanner
 {
     private readonly ImageProbeService _images;
     private readonly FfmpegService _ffmpeg;
+    private readonly SceneFrameExtractor _scenes;
 
-    public SourceScanner(ImageProbeService images, FfmpegService ffmpeg)
+    public SourceScanner(ImageProbeService images, FfmpegService ffmpeg, SceneFrameExtractor scenes)
     {
         _images = images;
         _ffmpeg = ffmpeg;
+        _scenes = scenes;
     }
 
     public async Task<ScanResult> ScanAsync(
@@ -74,7 +76,7 @@ public sealed class SourceScanner
             var fraction = 8 + (projectRoots.Count == 0 ? 0 : 40d * projectIndex / projectRoots.Count);
             progress?.Report(new ScanProgress("Detecting", $"Project {projectIndex:N0} of {projectRoots.Count:N0}", fraction));
 
-            var source = await BuildProjectSourceAsync(projectDirectory, gate, cancellationToken).ConfigureAwait(false);
+            var source = await BuildProjectSourceAsync(projectDirectory, settings, gate, cancellationToken).ConfigureAwait(false);
             if (source is null)
             {
                 continue;
@@ -131,7 +133,7 @@ public sealed class SourceScanner
             }
 
             var source = MediaFileTypes.IsPkg(path)
-                ? await BuildPkgSourceAsync(path, gate, cancellationToken).ConfigureAwait(false)
+                ? await BuildPkgSourceAsync(path, settings, cancellationToken).ConfigureAwait(false)
                 : MediaFileTypes.IsVideo(path)
                     ? await BuildLooseVideoAsync(path, gate, cancellationToken).ConfigureAwait(false)
                     : await BuildLooseImageAsync(path, cancellationToken).ConfigureAwait(false);
@@ -161,7 +163,7 @@ public sealed class SourceScanner
         return result;
     }
 
-    private async Task<WallpaperSource?> BuildProjectSourceAsync(string directory, SemaphoreSlim gate, CancellationToken cancellationToken)
+    private async Task<WallpaperSource?> BuildProjectSourceAsync(string directory, AppSettings settings, SemaphoreSlim gate, CancellationToken cancellationToken)
     {
         var manifestPath = Path.Combine(directory, MediaFileTypes.ProjectFileName);
         ProjectManifestReader.TryRead(manifestPath, out var manifest, out var warning);
@@ -260,20 +262,7 @@ public sealed class SourceScanner
 
         if (kind == WallpaperKind.SceneProject)
         {
-            if (preview is not null)
-            {
-                source.CandidateFramePath = preview;
-                source.UsesPreviewFallback = true;
-                source.ApprovalStatus = ApprovalStatus.Pending;
-                source.Status = SourceStatus.NeedsReview;
-            }
-            else
-            {
-                source.UsesPreviewFallback = true;
-                source.ApprovalStatus = ApprovalStatus.Pending;
-                source.Status = SourceStatus.NeedsReview;
-                source.ErrorMessage = "No preview asset was found. Scene rendering is unavailable; choose another image manually if you want to export this source.";
-            }
+            await PopulateSceneAsync(source, preview, settings, cancellationToken).ConfigureAwait(false);
         }
         else if (kind == WallpaperKind.VideoWallpaper)
         {
@@ -326,7 +315,7 @@ public sealed class SourceScanner
         return source;
     }
 
-    private async Task<WallpaperSource?> BuildPkgSourceAsync(string path, SemaphoreSlim gate, CancellationToken cancellationToken)
+    private async Task<WallpaperSource?> BuildPkgSourceAsync(string path, AppSettings settings, CancellationToken cancellationToken)
     {
         var directory = Path.GetDirectoryName(path)!;
         var preview = PreviewResolver.FindPreviewImage(directory);
@@ -342,31 +331,51 @@ public sealed class SourceScanner
             LastModified = MaxModified(path, preview),
             ApprovalStatus = ApprovalStatus.Pending,
             Status = SourceStatus.NeedsReview,
-            UsesPreviewFallback = true,
-            CandidateFramePath = preview
+            UsesPreviewFallback = false
         };
 
-        if (preview is not null)
-        {
-            var resolution = await _images.IdentifyAsync(preview, cancellationToken).ConfigureAwait(false);
-            source.Resolution = resolution;
-        }
-        else
-        {
-            source.ErrorMessage = "No sibling preview was found. The app can attempt a conservative embedded-preview scan when you review this source.";
-        }
+        await PopulateSceneAsync(source, preview, settings, cancellationToken).ConfigureAwait(false);
 
-        await gate.WaitAsync(cancellationToken).ConfigureAwait(false);
-        try
+        if (!source.Resolution.IsKnown)
         {
-            source.DurationSeconds = 0;
-        }
-        finally
-        {
-            gate.Release();
+            source.ErrorMessage = "No resolution could be read from the package. The app can attempt a conservative embedded-preview scan when you review this source.";
         }
 
         return source;
+    }
+
+    /// <summary>
+    /// Sets the real (full-resolution) size of a scene source with a cheap header
+    /// pass and applies the auto-approval preference. The image itself is only
+    /// decoded later, on review or export, so scanning 900+ scenes stays fast.
+    /// </summary>
+    private async Task PopulateSceneAsync(WallpaperSource source, string? preview, AppSettings settings, CancellationToken cancellationToken)
+    {
+        source.UsesPreviewFallback = false;
+
+        var described = await _scenes.DescribeAsync(source, cancellationToken).ConfigureAwait(false);
+        if (described.IsKnown)
+        {
+            source.Resolution = described;
+        }
+        else if (preview is not null)
+        {
+            source.Resolution = await _images.IdentifyAsync(preview, cancellationToken).ConfigureAwait(false);
+        }
+
+        // Auto-approve only when the real scene image resolves to at least 1080p.
+        // A scene whose textures cannot be read falls back to its small preview and
+        // is left for an explicit review instead of silently exporting a thumbnail.
+        if (settings.AutoApproveScenes && source.Resolution.PassesMinimum1080p)
+        {
+            source.ApprovalStatus = ApprovalStatus.Approved;
+            source.Status = SourceStatus.Approved;
+        }
+        else
+        {
+            source.ApprovalStatus = ApprovalStatus.Pending;
+            source.Status = SourceStatus.NeedsReview;
+        }
     }
 
     private async Task<WallpaperSource?> BuildLooseImageAsync(string path, CancellationToken cancellationToken)
