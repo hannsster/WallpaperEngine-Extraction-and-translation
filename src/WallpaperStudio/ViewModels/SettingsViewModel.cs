@@ -276,6 +276,34 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    public bool ReverseSearchIqdb
+    {
+        get => Settings.ReverseSearchIqdb;
+        set
+        {
+            if (Settings.ReverseSearchIqdb != value)
+            {
+                Settings.ReverseSearchIqdb = value;
+                OnPropertyChanged();
+                RefreshReverseState();
+            }
+        }
+    }
+
+    public bool ReverseSearchLimitAutomatic
+    {
+        get => Settings.ReverseSearchLimitAutomatic;
+        set
+        {
+            if (Settings.ReverseSearchLimitAutomatic != value)
+            {
+                Settings.ReverseSearchLimitAutomatic = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ReverseSearchBudgetText));
+            }
+        }
+    }
+
     public bool ReverseSearchEnrichBooru
     {
         get => Settings.ReverseSearchEnrichBooru;
@@ -349,8 +377,9 @@ public sealed class SettingsViewModel : ObservableObject
 
     public string ReverseSearchConfidenceText => $"{Settings.ReverseSearchMinSimilarity:P0} minimum match confidence";
 
-    public string ReverseSearchBudgetText =>
-        $"{_reverse.AutomaticSearchesToday} of {Settings.ReverseSearchDailyLimit} automatic searches used today";
+    public string ReverseSearchBudgetText => Settings.ReverseSearchLimitAutomatic
+        ? $"{_reverse.AutomaticSearchesToday} of {Settings.ReverseSearchDailyLimit} automatic searches used today. Manual searches are never blocked."
+        : "No daily cap: automatic searches run on every extraction. Manual searches are always free.";
 
     public bool HasReverseSearchConsent => Settings.ReverseSearchConsent;
 
@@ -388,6 +417,7 @@ public sealed class SettingsViewModel : ObservableObject
         return _dialogs.Confirm("Turn on reverse image search?",
             "Wallpaper Studio uploads a 1280-pixel JPEG copy of an extracted frame to the providers you enable, so they can find the original artwork.\n\n" +
             "• SauceNAO - Pixiv and booru originals (needs a free API key)\n" +
+            "• IQDB - Danbooru, Konachan, yande.re, Gelbooru and more (keyless)\n" +
             "• trace.moe - anime scene identification (keyless)\n" +
             "• Google Vision - pages with the same or similar image (needs a key)\n\n" +
             "Provider keys are stored in settings.json on this PC. No full-size image is downloaded unless you pick a result, and nothing is ever published.");
@@ -397,7 +427,8 @@ public sealed class SettingsViewModel : ObservableObject
     {
         OnPropertyChanged(
             nameof(ReverseSearchStatusText), nameof(ReverseSearchTone), nameof(HasReverseSearchConsent),
-            nameof(ReverseSearchBudgetText), nameof(ReverseSearchConfidenceText));
+            nameof(ReverseSearchBudgetText), nameof(ReverseSearchConfidenceText),
+            nameof(ReverseSearchIqdb), nameof(ReverseSearchLimitAutomatic));
     }
 
     public bool SkipAlreadyExported
@@ -520,6 +551,7 @@ public sealed class SettingsViewModel : ObservableObject
             nameof(OpenExportFolderAfterBatch), nameof(AutoApproveScenes), nameof(DataDirectory), nameof(SettingsFile), nameof(StateFile),
             nameof(PortableModeText), nameof(PortableTone), nameof(StateRecordCount),
             nameof(ReverseSearchEnabled), nameof(ReverseSearchAutomatic), nameof(ReverseSearchTraceMoe),
+            nameof(ReverseSearchIqdb), nameof(ReverseSearchLimitAutomatic),
             nameof(ReverseSearchEnrichBooru), nameof(SauceNaoApiKey), nameof(GoogleVisionApiKey),
             nameof(ReverseSearchDailyLimit), nameof(ReverseSearchMinSimilarity), nameof(ReverseSearchConfidenceText),
             nameof(ReverseSearchBudgetText), nameof(ReverseSearchStatusText), nameof(ReverseSearchTone), nameof(HasReverseSearchConsent));
@@ -729,6 +761,8 @@ public sealed class SettingsViewModel : ObservableObject
         Settings.ReverseSearchConsent = false;
         Settings.ReverseSearchAutomatic = true;
         Settings.ReverseSearchTraceMoe = true;
+        Settings.ReverseSearchIqdb = true;
+        Settings.ReverseSearchLimitAutomatic = true;
         Settings.ReverseSearchEnrichBooru = true;
         Settings.SauceNaoApiKey = string.Empty;
         Settings.GoogleVisionApiKey = string.Empty;

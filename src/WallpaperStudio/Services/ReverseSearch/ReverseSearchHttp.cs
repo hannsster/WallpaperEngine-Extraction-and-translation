@@ -8,7 +8,7 @@ namespace WallpaperStudio.Services.ReverseSearch;
 internal static class ReverseSearchHttp
 {
     public const string UserAgent =
-        "WallpaperStudio/1.3 (personal wallpaper library; +https://github.com/hannsster/WallpaperEngine-Extraction-and-translation)";
+        "WallpaperStudio/1.4 (personal wallpaper library; +https://github.com/hannsster/WallpaperEngine-Extraction-and-translation)";
 
     public static HttpClient CreateClient()
     {

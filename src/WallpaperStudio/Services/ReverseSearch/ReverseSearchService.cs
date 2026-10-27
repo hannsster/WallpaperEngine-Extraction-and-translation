@@ -41,6 +41,7 @@ public sealed class ReverseSearchService
         [
             new SauceNaoProvider(client),
             new GoogleVisionProvider(client),
+            new IqdbProvider(client),
             new TraceMoeProvider(client)
         ];
     }
@@ -224,7 +225,7 @@ public sealed class ReverseSearchService
                 {
                     Status = ReverseSearchStatus.Skipped,
                     SearchedAt = DateTimeOffset.Now,
-                    Notes = [$"The automatic search limit for today ({settings.ReverseSearchDailyLimit}) has been reached. You can still search this wallpaper manually."]
+                    Notes = [$"The automatic search limit for today ({settings.ReverseSearchDailyLimit}) has been reached. You can still search this wallpaper manually, or turn the daily cap off in Settings."]
                 };
             }
 
@@ -438,6 +439,7 @@ public sealed class ReverseSearchService
             {
                 "saucenao" => 1.0,
                 "googlevision" => 0.9,
+                "iqdb" => 0.85,
                 _ => 0.45
             };
 
@@ -541,6 +543,13 @@ public sealed class ReverseSearchService
 
     private bool TryConsumeBudget(AppSettings settings)
     {
+        if (!settings.ReverseSearchLimitAutomatic)
+        {
+            // The cap is optional. Counting is skipped entirely so turning it back
+            // on later starts from a clean slate instead of an exhausted day.
+            return true;
+        }
+
         var today = DateTime.Now.ToString("yyyy-MM-dd");
         var usage = _cache.LoadUsage();
         if (!string.Equals(usage.Date, today, StringComparison.Ordinal))

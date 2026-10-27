@@ -17,8 +17,9 @@ public sealed class ReverseSearchProviderException : Exception
 }
 
 /// <summary>
-/// One reverse-image service. Implementations only talk to documented public
-/// APIs; none of them scrape result pages or bypass logins.
+/// One reverse-image service. Implementations talk either to a documented public
+/// API or to a provider's own public, keyless search form. None of them bypass a
+/// login, paywall or rate limit.
 /// </summary>
 public interface IReverseImageProvider
 {

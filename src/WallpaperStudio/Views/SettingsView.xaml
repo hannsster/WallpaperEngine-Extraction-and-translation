@@ -168,7 +168,31 @@
                                 <TextBlock Text="{Binding ReverseSearchBudgetText}" Style="{StaticResource Micro}"
                                            Margin="53,5,0,12" TextWrapping="Wrap" />
 
+                                <CheckBox Style="{StaticResource Switch}" Content="Cap automatic searches per day"
+                                          IsChecked="{Binding ReverseSearchLimitAutomatic}"
+                                          IsEnabled="{Binding ReverseSearchEnabled}" />
+                                <StackPanel Margin="53,5,0,12"
+                                            Visibility="{Binding ReverseSearchLimitAutomatic, Converter={StaticResource BoolToVisibility}}">
+                                    <Grid>
+                                        <TextBlock Text="AUTOMATIC SEARCHES PER DAY" Style="{StaticResource Micro}" />
+                                        <TextBlock Text="{Binding ReverseSearchDailyLimit}" Style="{StaticResource Micro}"
+                                                   HorizontalAlignment="Right" Foreground="{StaticResource Brush.Accent}" />
+                                    </Grid>
+                                    <Slider Style="{StaticResource ModernSlider}" Margin="0,6,0,0"
+                                            Minimum="5" Maximum="500" TickFrequency="5" IsSnapToTickEnabled="True"
+                                            Value="{Binding ReverseSearchDailyLimit, Mode=TwoWay}"
+                                            IsEnabled="{Binding ReverseSearchEnabled}" />
+                                    <TextBlock Text="Background searches only. Results already in the cache cost nothing, and pressing Search again on a wallpaper is never blocked. SauceNAO's free key is about 150 searches a month and Google's free Vision tier about 1,000, so a cap keeps a bulk import from using them up."
+                                               Style="{StaticResource Micro}" TextWrapping="Wrap" />
+                                </StackPanel>
+
                                 <Border Style="{StaticResource Divider}" />
+
+                                <CheckBox Style="{StaticResource Switch}" Content="IQDB (anime boorus, no key)"
+                                          IsChecked="{Binding ReverseSearchIqdb}"
+                                          IsEnabled="{Binding ReverseSearchEnabled}" />
+                                <TextBlock Text="One upload is checked against Danbooru, Konachan, yande.re, Gelbooru, Sankaku, e-shuushuu, Zerochan and Anime-Pictures. Exact matches usually score 95-99%; looser lookalikes are hidden by the confidence floor. IQDB scans tens of millions of images, so it can take 20-45 seconds to answer; the other providers finish sooner but all results appear together."
+                                           Style="{StaticResource Micro}" Margin="53,5,0,12" TextWrapping="Wrap" />
 
                                 <CheckBox Style="{StaticResource Switch}" Content="trace.moe (anime scenes, no key)"
                                           IsChecked="{Binding ReverseSearchTraceMoe}"
@@ -201,18 +225,6 @@
                                         Minimum="0.5" Maximum="0.99" TickFrequency="0.01" IsSnapToTickEnabled="True"
                                         Value="{Binding ReverseSearchMinSimilarity, Mode=TwoWay}" />
                                 <TextBlock Text="Matches below this score are hidden so a weak guess never looks like a real original."
-                                           Style="{StaticResource Micro}" TextWrapping="Wrap" />
-
-                                <Grid Margin="0,12,0,0">
-                                    <TextBlock Text="AUTOMATIC SEARCHES PER DAY" Style="{StaticResource Micro}" />
-                                    <TextBlock Text="{Binding ReverseSearchDailyLimit}" Style="{StaticResource Micro}"
-                                               HorizontalAlignment="Right" Foreground="{StaticResource Brush.Accent}" />
-                                </Grid>
-                                <Slider Style="{StaticResource ModernSlider}" Margin="0,8,0,0"
-                                        Minimum="5" Maximum="200" TickFrequency="5" IsSnapToTickEnabled="True"
-                                        Value="{Binding ReverseSearchDailyLimit, Mode=TwoWay}"
-                                        IsEnabled="{Binding ReverseSearchEnabled}" />
-                                <TextBlock Text="Caps background searches so a large library cannot burn through provider quotas. Manual searches are never blocked, and cached results are never counted twice."
                                            Style="{StaticResource Micro}" TextWrapping="Wrap" />
 
                                 <TextBlock Text="API keys are stored as plain text in settings.json on this PC. Uploads go only to the services listed above; results and thumbnails are cached under the portable cache folder and can be cleared with it."

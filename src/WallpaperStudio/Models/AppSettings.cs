@@ -25,13 +25,21 @@ public sealed class AppSettings
     /// <summary>Search automatically once a usable frame has been extracted.</summary>
     public bool ReverseSearchAutomatic { get; set; } = true;
 
-    /// <summary>trace.moe is keyless; the others need a free API key.</summary>
+    /// <summary>trace.moe and IQDB are keyless; the others need a free API key.</summary>
     public bool ReverseSearchTraceMoe { get; set; } = true;
+
+    public bool ReverseSearchIqdb { get; set; } = true;
 
     public string SauceNaoApiKey { get; set; } = string.Empty;
     public string GoogleVisionApiKey { get; set; } = string.Empty;
 
-    /// <summary>Automatic searches allowed per calendar day. Manual searches are never blocked.</summary>
+    /// <summary>
+    /// Caps background searches so a bulk library scan cannot burn through provider
+    /// quotas. Manual searches are never blocked and are never counted.
+    /// </summary>
+    public bool ReverseSearchLimitAutomatic { get; set; } = true;
+
+    /// <summary>Automatic searches allowed per calendar day when the cap is on.</summary>
     public int ReverseSearchDailyLimit { get; set; } = 40;
 
     /// <summary>0..1 confidence floor applied to every provider.</summary>
