@@ -80,11 +80,17 @@
                             </StackPanel>
                         </Border>
                         <Button x:Name="MinimizeButton" Style="{StaticResource IconButton}"
-                                Content="&#xE921;" ToolTip="Minimize" Click="MinimizeButton_Click" />
+                                ToolTip="Minimize" Click="MinimizeButton_Click">
+                            <TextBlock Text="&#xE921;" FontFamily="{StaticResource Font.Icon}" FontSize="10" />
+                        </Button>
                         <Button x:Name="MaximizeButton" Style="{StaticResource IconButton}"
-                                Content="&#xE922;" ToolTip="Maximize" Click="MaximizeButton_Click" />
+                                ToolTip="Maximize" Click="MaximizeButton_Click">
+                            <TextBlock Text="&#xE922;" FontFamily="{StaticResource Font.Icon}" FontSize="10" />
+                        </Button>
                         <Button x:Name="CloseButton" Style="{StaticResource CloseIconButton}"
-                                Content="&#xE8BB;" ToolTip="Close" Click="CloseButton_Click" />
+                                ToolTip="Close" Click="CloseButton_Click">
+                            <TextBlock Text="&#xE8BB;" FontFamily="{StaticResource Font.Icon}" FontSize="10" />
+                        </Button>
                     </StackPanel>
                 </Grid>
             </Border>

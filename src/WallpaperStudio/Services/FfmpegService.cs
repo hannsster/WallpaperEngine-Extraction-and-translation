@@ -200,8 +200,7 @@ public sealed partial class FfmpegService
         double timeSeconds,
         string outputPath,
         CancellationToken cancellationToken)
-    {
-        if (!_toolchain.HasFfmpeg)
+    {        if (!_toolchain.HasFfmpeg)
         {
             throw new FfmpegUnavailableException();
         }
@@ -227,6 +226,96 @@ public sealed partial class FfmpegService
         }
 
         return new FrameExtractionResult(outputPath, timeSeconds, warning);
+    }
+
+    /// <summary>
+    /// Renders a filmstrip of evenly spaced frames so the user can pick a good
+    /// moment instead of guessing a timestamp. Scores come from
+    /// <see cref="FrameAnalyzer"/> and are used to suggest the best frame.
+    /// </summary>
+    public async Task<IReadOnlyList<FrameSample>> ExtractFilmstripAsync(
+        string videoPath,
+        double durationSeconds,
+        int count,
+        string cacheKey,
+        CancellationToken cancellationToken)
+    {
+        if (!_toolchain.HasFfmpeg)
+        {
+            throw new FfmpegUnavailableException();
+        }
+
+        count = Math.Clamp(count, 4, 24);
+        if (durationSeconds <= 0.25)
+        {
+            return [];
+        }
+
+        var start = durationSeconds > 6 ? durationSeconds * 0.02 : 0;
+        var end = durationSeconds * 0.96;
+        var span = Math.Max(0.5, end - start);
+        var safeKey = string.IsNullOrWhiteSpace(cacheKey) ? "video" : cacheKey[..Math.Min(16, cacheKey.Length)];
+        var directory = Path.Combine(AppPaths.FrameCacheDirectory, "filmstrip");
+        Directory.CreateDirectory(directory);
+
+        var pattern = Path.Combine(directory, $"{safeKey}-{count}-%03d.jpg");
+        var existing = Enumerable.Range(1, count)
+            .Select(index => Path.Combine(directory, $"{safeKey}-{count}-{index:000}.jpg"))
+            .ToList();
+
+        if (existing.Any(path => !File.Exists(path)))
+        {
+            foreach (var path in existing)
+            {
+                TryDelete(path);
+            }
+
+            var fps = Math.Max(0.01, count / span);
+            await RunAsync(
+                _toolchain.FfmpegPath!,
+                [
+                    "-hide_banner",
+                    "-nostdin",
+                    "-loglevel", "error",
+                    "-ss", start.ToString("0.###", CultureInfo.InvariantCulture),
+                    "-i", videoPath,
+                    "-t", span.ToString("0.###", CultureInfo.InvariantCulture),
+                    "-vf", $"fps={fps.ToString("0.####", CultureInfo.InvariantCulture)},scale=480:-2",
+                    "-frames:v", count.ToString(CultureInfo.InvariantCulture),
+                    "-q:v", "4",
+                    "-y",
+                    pattern
+                ],
+                180,
+                cancellationToken,
+                throwOnNonZero: false).ConfigureAwait(false);
+        }
+
+        var samples = new List<FrameSample>(count);
+        for (var index = 1; index <= count; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var path = Path.Combine(directory, $"{safeKey}-{count}-{index:000}.jpg");
+            if (!File.Exists(path))
+            {
+                continue;
+            }
+
+            var time = start + ((index - 0.5) * span / count);
+            var quality = FrameAnalyzer.AnalyzeFile(path);
+            samples.Add(new FrameSample
+            {
+                Index = index,
+                Path = path,
+                TimeSeconds = Math.Clamp(time, 0, Math.Max(0, durationSeconds - 0.1)),
+                Score = quality.Score,
+                IsAllBlack = quality.IsAllBlack,
+                IsWeak = quality.IsWeak
+            });
+        }
+
+        Logger.Debug($"Filmstrip for '{Path.GetFileName(videoPath)}': {samples.Count} frame(s), span {start:0.0}-{end:0.0}s.");
+        return samples;
     }
 
     private async Task<string?> TryExtractAsync(

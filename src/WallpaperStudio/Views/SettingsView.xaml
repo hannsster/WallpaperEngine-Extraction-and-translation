@@ -132,6 +132,94 @@
                                 <TextBlock Text="Try a later timestamp when the opening second is a logo or fade-in." Style="{StaticResource Micro}" />
                             </StackPanel>
                         </Border>
+
+                        <!-- Reverse image search -->
+                        <Border Style="{StaticResource RaisedCard}" Padding="18,16" Margin="0,0,0,14">
+                            <StackPanel>
+                                <Grid Margin="0,0,0,4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE721;" FontFamily="{StaticResource Font.Icon}" FontSize="15"
+                                                   Foreground="{StaticResource Brush.Accent}" VerticalAlignment="Center" />
+                                        <TextBlock Text="Reverse image search" Style="{StaticResource SectionTitle}" Margin="9,0,0,0" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Style="{StaticResource Chip}" VerticalAlignment="Center"
+                                            Background="{Binding ReverseSearchTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                                            BorderBrush="{Binding ReverseSearchTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+                                        <TextBlock Text="{Binding ReverseSearchStatusText}" Style="{StaticResource ChipText}"
+                                                   Foreground="{Binding ReverseSearchTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}"
+                                                   TextTrimming="CharacterEllipsis" MaxWidth="190" />
+                                    </Border>
+                                </Grid>
+                                <TextBlock Text="Looks for the original artwork behind an extracted frame by uploading a 1280-pixel JPEG copy to the providers you enable. Off by default, and nothing is downloaded or published without your consent."
+                                           Style="{StaticResource Caption}" Margin="0,0,0,12" TextWrapping="Wrap" />
+
+                                <CheckBox Style="{StaticResource Switch}" Content="Enable reverse image search"
+                                          IsChecked="{Binding ReverseSearchEnabled}" />
+                                <TextBlock Text="Turning this on asks you to confirm the upload once. Turning it off stops all network traffic immediately."
+                                           Style="{StaticResource Micro}" Margin="53,5,0,12" TextWrapping="Wrap" />
+
+                                <CheckBox Style="{StaticResource Switch}" Content="Search automatically after extraction"
+                                          IsChecked="{Binding ReverseSearchAutomatic}"
+                                          IsEnabled="{Binding ReverseSearchEnabled}" />
+                                <TextBlock Text="{Binding ReverseSearchBudgetText}" Style="{StaticResource Micro}"
+                                           Margin="53,5,0,12" TextWrapping="Wrap" />
+
+                                <Border Style="{StaticResource Divider}" />
+
+                                <CheckBox Style="{StaticResource Switch}" Content="trace.moe (anime scenes, no key)"
+                                          IsChecked="{Binding ReverseSearchTraceMoe}"
+                                          IsEnabled="{Binding ReverseSearchEnabled}" />
+                                <TextBlock Text="Identifies the anime, episode and timestamp of a frame. It only identifies the source; it cannot return a larger image."
+                                           Style="{StaticResource Micro}" Margin="53,5,0,12" TextWrapping="Wrap" />
+
+                                <TextBlock Text="SAUCENAO API KEY" Style="{StaticResource Micro}" />
+                                <TextBox Style="{StaticResource ModernTextBox}" Margin="0,6,0,0"
+                                         Text="{Binding SauceNaoApiKey, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Free API key from saucenao.com" />
+                                <TextBlock Text="Free key from saucenao.com. SauceNAO finds Pixiv and booru originals, which is where most Wallpaper Engine art comes from."
+                                           Style="{StaticResource Micro}" Margin="0,6,0,0" TextWrapping="Wrap" />
+
+                                <TextBlock Text="GOOGLE VISION API KEY" Style="{StaticResource Micro}" Margin="0,12,0,0" />
+                                <TextBox Style="{StaticResource ModernTextBox}" Margin="0,6,0,0"
+                                         Text="{Binding GoogleVisionApiKey, UpdateSourceTrigger=PropertyChanged}"
+                                         ToolTip="Google Cloud Vision API key with Web Detection enabled" />
+                                <TextBlock Text="Optional. Covers general artwork that SauceNAO cannot index. The Web Detection free tier is about 1,000 searches per month."
+                                           Style="{StaticResource Micro}" Margin="0,6,0,0" TextWrapping="Wrap" />
+
+                                <Border Style="{StaticResource Divider}" />
+
+                                <Grid>
+                                    <TextBlock Text="MINIMUM MATCH CONFIDENCE" Style="{StaticResource Micro}" />
+                                    <TextBlock Text="{Binding ReverseSearchConfidenceText}" Style="{StaticResource Micro}"
+                                               HorizontalAlignment="Right" Foreground="{StaticResource Brush.Accent}" />
+                                </Grid>
+                                <Slider Style="{StaticResource ModernSlider}" Margin="0,8,0,0"
+                                        Minimum="0.5" Maximum="0.99" TickFrequency="0.01" IsSnapToTickEnabled="True"
+                                        Value="{Binding ReverseSearchMinSimilarity, Mode=TwoWay}" />
+                                <TextBlock Text="Matches below this score are hidden so a weak guess never looks like a real original."
+                                           Style="{StaticResource Micro}" TextWrapping="Wrap" />
+
+                                <Grid Margin="0,12,0,0">
+                                    <TextBlock Text="AUTOMATIC SEARCHES PER DAY" Style="{StaticResource Micro}" />
+                                    <TextBlock Text="{Binding ReverseSearchDailyLimit}" Style="{StaticResource Micro}"
+                                               HorizontalAlignment="Right" Foreground="{StaticResource Brush.Accent}" />
+                                </Grid>
+                                <Slider Style="{StaticResource ModernSlider}" Margin="0,8,0,0"
+                                        Minimum="5" Maximum="200" TickFrequency="5" IsSnapToTickEnabled="True"
+                                        Value="{Binding ReverseSearchDailyLimit, Mode=TwoWay}"
+                                        IsEnabled="{Binding ReverseSearchEnabled}" />
+                                <TextBlock Text="Caps background searches so a large library cannot burn through provider quotas. Manual searches are never blocked, and cached results are never counted twice."
+                                           Style="{StaticResource Micro}" TextWrapping="Wrap" />
+
+                                <TextBlock Text="API keys are stored as plain text in settings.json on this PC. Uploads go only to the services listed above; results and thumbnails are cached under the portable cache folder and can be cleared with it."
+                                           Style="{StaticResource Micro}" Margin="0,11,0,0" TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
                     </StackPanel>
 
                     <!-- ==================== Right column ==================== -->
@@ -196,7 +284,7 @@
                                 </Grid>
 
                                 <TextBlock Text="FFmpeg is licensed separately (typically LGPL/GPL depending on the build). If you redistribute it, include its license and source offer. Wallpaper Studio never bundles or downloads it."
-                                           Style="{StaticResource Micro}" Margin="0,11,0,0" />
+                                           Style="{StaticResource Micro}" Margin="0,11,0,0" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
 
@@ -239,10 +327,10 @@
                                          Text="{Binding SteamUsername, UpdateSourceTrigger=PropertyChanged}"
                                          ToolTip="Only the account name. Never enter your password here." />
                                 <TextBlock Text="Just the account name, so uploads can reuse the SteamCMD session you created with Sign in. Wallpaper Studio has no password field by design."
-                                           Style="{StaticResource Micro}" Margin="0,6,0,0" />
+                                           Style="{StaticResource Micro}" Margin="0,6,0,0" TextWrapping="Wrap" />
 
                                 <TextBlock Text="SteamCMD and Steam are Valve's tools and are distributed by Valve under Valve's terms. Wallpaper Studio never bundles or downloads them, and only uploads items you explicitly publish."
-                                           Style="{StaticResource Micro}" Margin="0,11,0,0" />
+                                           Style="{StaticResource Micro}" Margin="0,11,0,0" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
 
@@ -256,10 +344,10 @@
                                 </StackPanel>
                                 <CheckBox Style="{StaticResource Switch}" Content="Skip unchanged exports" IsChecked="{Binding SkipAlreadyExported}" />
                                 <TextBlock Text="A source is skipped only when its fingerprint and last-modified time still match. The per-batch override in the library can force a re-export."
-                                           Style="{StaticResource Micro}" Margin="53,5,0,12" />
+                                           Style="{StaticResource Micro}" Margin="53,5,0,12" TextWrapping="Wrap" />
                                 <CheckBox Style="{StaticResource Switch}" Content="Auto-approve extracted scene frames" IsChecked="{Binding AutoApproveScenes}" />
                                 <TextBlock Text="Scenes that resolve to full resolution are exported without a manual step. Scenes below 1080p, frames that come out nearly all black, and every video still need your approval."
-                                           Style="{StaticResource Micro}" Margin="53,5,0,12" />
+                                           Style="{StaticResource Micro}" Margin="53,5,0,12" TextWrapping="Wrap" />
                                 <CheckBox Style="{StaticResource Switch}" Content="Open export folder after a batch" IsChecked="{Binding OpenExportFolderAfterBatch}" />
                                 <TextBlock Text="Useful when you want to copy the JPEGs to a tablet immediately."
                                            Style="{StaticResource Micro}" Margin="53,5,0,0" />
@@ -295,14 +383,14 @@
                                 </StackPanel>
 
                                 <TextBlock Text="Wallpaper Studio only reads local wallpaper files you select. It stays offline until you press Publish on the Workshop screen, which runs Valve's own SteamCMD."
-                                           Style="{StaticResource Micro}" Margin="0,12,0,0" />
+                                           Style="{StaticResource Micro}" Margin="0,12,0,0" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
                     </StackPanel>
                 </Grid>
 
                 <TextBlock Text="Personal use only. Respect the rights of wallpaper creators; do not publish content you do not own or license."
-                           Style="{StaticResource Micro}" HorizontalAlignment="Center" Margin="0,6,0,10" />
+                           Style="{StaticResource Micro}" HorizontalAlignment="Center" Margin="0,6,0,10" TextWrapping="Wrap" TextAlignment="Center" />
             </StackPanel>
         </ScrollViewer>
     </Grid>

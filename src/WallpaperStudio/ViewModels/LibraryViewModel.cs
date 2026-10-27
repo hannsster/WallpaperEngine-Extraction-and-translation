@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows.Data;
 using System.Windows.Input;
+using WallpaperStudio.Services.ReverseSearch;
 
 namespace WallpaperStudio.ViewModels;
 
@@ -16,6 +17,7 @@ public sealed class LibraryViewModel : ObservableObject
     private readonly FfmpegService _ffmpeg;
     private readonly PkgPreviewExtractor _pkgPreviews;
     private readonly SceneFrameExtractor _sceneFrames;
+    private readonly ReverseSearchService _reverse;
     private readonly DialogService _dialogs;
     private readonly ShellState _shell;
     private readonly AsyncRelayCommand _scanCommand;
@@ -36,6 +38,7 @@ public sealed class LibraryViewModel : ObservableObject
         FfmpegService ffmpeg,
         PkgPreviewExtractor pkgPreviews,
         SceneFrameExtractor sceneFrames,
+        ReverseSearchService reverse,
         DialogService dialogs,
         ShellState shell)
     {
@@ -48,6 +51,7 @@ public sealed class LibraryViewModel : ObservableObject
         _ffmpeg = ffmpeg;
         _pkgPreviews = pkgPreviews;
         _sceneFrames = sceneFrames;
+        _reverse = reverse;
         _dialogs = dialogs;
         _shell = shell;
 
@@ -77,6 +81,20 @@ public sealed class LibraryViewModel : ObservableObject
         ClearCommand = new RelayCommand(Clear, () => Wallpapers.Count > 0);
         SelectAllVisibleCommand = new RelayCommand(() => { });
         SetFilterCommand = new RelayCommand<string>(SetFilter);
+        FindOriginalCommand = new RelayCommand<WallpaperSource>(item =>
+        {
+            if (item is null)
+            {
+                return;
+            }
+
+            if (!Settings.ReverseSearchEnabled || !Settings.ReverseSearchConsent)
+            {
+                _shell.ReportText("Review this frame to turn on reverse image search and find the original artwork.");
+            }
+
+            RequestReview(item);
+        });
     }
 
     public ObservableCollection<WallpaperSource> Wallpapers { get; }
@@ -96,6 +114,7 @@ public sealed class LibraryViewModel : ObservableObject
     public ICommand ClearCommand { get; }
     public ICommand SelectAllVisibleCommand { get; }
     public ICommand SetFilterCommand { get; }
+    public ICommand FindOriginalCommand { get; }
 
     public string SourceFolder => Settings.SourceFolder;
 
@@ -297,6 +316,8 @@ public sealed class LibraryViewModel : ObservableObject
             {
                 _ = LoadThumbnailAsync(item);
             }
+
+            _ = RestoreReverseResultsAsync();
         }
         catch (OperationCanceledException)
         {
@@ -380,9 +401,11 @@ public sealed class LibraryViewModel : ObservableObject
             return;
         }
 
-        source.CandidateFrameTime = record.FrameTimestampSeconds > 0
-            ? record.FrameTimestampSeconds
-            : Settings.DefaultFrameTimestampSeconds;
+        // Only frame-based sources need the default timestamp; a loose image has no
+        // timeline, and a stray default there would change its reverse-search key.
+        source.CandidateFrameTime = source.RequiresApproval
+            ? (record.FrameTimestampSeconds > 0 ? record.FrameTimestampSeconds : Settings.DefaultFrameTimestampSeconds)
+            : record.FrameTimestampSeconds;
         source.UsesPreviewFallback = record.UsesPreviewFallback;
 
         if (source.RequiresApproval && record.ApprovalStatus is ApprovalStatus.Approved or ApprovalStatus.Rejected)
@@ -589,6 +612,7 @@ public sealed class LibraryViewModel : ObservableObject
         {
             item.CandidateFramePath = item.PrimaryFilePath;
             item.UsesPreviewFallback = false;
+            StartAutoSearch(item);
             return;
         }
 
@@ -596,6 +620,7 @@ public sealed class LibraryViewModel : ObservableObject
         {
             if (item.HasCandidate)
             {
+                StartAutoSearch(item);
                 return;
             }
 
@@ -611,6 +636,9 @@ public sealed class LibraryViewModel : ObservableObject
             item.CandidateFramePath = result.Path;
             item.CandidateFrameTime = result.TimeSeconds;
             item.UsesPreviewFallback = false;
+
+            await TryImproveBlankFrameAsync(item, token);
+            StartAutoSearch(item);
             return;
         }
 
@@ -641,6 +669,7 @@ public sealed class LibraryViewModel : ObservableObject
                     throw new ExportException(item.ErrorMessage);
                 }
 
+                StartAutoSearch(item);
                 return;
             }
 
@@ -691,9 +720,150 @@ public sealed class LibraryViewModel : ObservableObject
         throw new ExportException("No preview or approved image is available. Open Review and choose an image.");
     }
 
-    private async Task LoadThumbnailAsync(WallpaperSource item)
+    /// <summary>
+    /// A blank opening second is common (fade-ins, logos, black scene start).
+    /// When the requested frame is weak, sample the video once and take the
+    /// clearest frame instead of silently exporting something unusable.
+    /// </summary>
+    private async Task TryImproveBlankFrameAsync(WallpaperSource item, CancellationToken token)
     {
+        if (!_ffmpeg.Toolchain.HasFfmpeg || item.DurationSeconds < 4 || !item.HasCandidate)
+        {
+            return;
+        }
+
+        var originalTime = item.CandidateFrameTime;
+        var path = item.CandidateFramePath!;
+        var quality = await Task.Run(() => FrameAnalyzer.AnalyzeFile(path), token);
+        if (!quality.IsWeak)
+        {
+            return;
+        }
+
         try
+        {
+            var samples = await _ffmpeg.ExtractFilmstripAsync(
+                item.PrimaryFilePath, item.DurationSeconds, 10, item.FileHash, token);
+            token.ThrowIfCancellationRequested();
+
+            var best = samples
+                .Where(sample => !sample.IsWeak && !sample.IsAllBlack)
+                .OrderByDescending(sample => sample.Score)
+                .FirstOrDefault();
+
+            if (best is null || best.Score < quality.Score + 4)
+            {
+                item.CandidateNote = "This frame has very little visible detail. Open Review to pick a different moment.";
+                return;
+            }
+
+            var stem = string.IsNullOrWhiteSpace(item.FileHash)
+                ? "video"
+                : item.FileHash[..Math.Min(16, item.FileHash.Length)];
+            var output = Path.Combine(AppPaths.FrameCacheDirectory, $"{stem}-auto-{best.TimeSeconds:0.###}.png");
+            var better = await _ffmpeg.ExtractFrameAsync(item.PrimaryFilePath, best.TimeSeconds, output, token);
+            item.CandidateFramePath = better.Path;
+            item.CandidateFrameTime = better.TimeSeconds;
+            item.CandidateNote =
+                $"The frame at {FormatTime(originalTime)} was mostly blank, so a clearer frame at {FormatTime(better.TimeSeconds)} was picked automatically.";
+            Logger.Info($"Auto-picked frame {FormatTime(better.TimeSeconds)} for '{item.Title}' (blank frame at {FormatTime(originalTime)}).");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Logger.Debug($"Filmstrip sampling failed for '{item.Title}': {ex.Message}");
+            item.CandidateNote = "This frame has very little visible detail. Open Review to pick a different moment.";
+        }
+    }
+
+    private void StartAutoSearch(WallpaperSource item)
+    {
+        if (!Settings.ReverseSearchEnabled ||
+            !Settings.ReverseSearchConsent ||
+            !Settings.ReverseSearchAutomatic)
+        {
+            return;
+        }
+
+        if (item.UsesPreviewFallback || item.IsReverseSearching || !item.HasCandidate)
+        {
+            return;
+        }
+
+        _ = AutoSearchAsync(item);
+    }
+
+    /// <summary>
+    /// Applies cached reverse-search results after a scan so a restart does not
+    /// lose the chips and cards for sources that were already searched.
+    /// </summary>
+    private async Task RestoreReverseResultsAsync()
+    {
+        if (!Settings.ReverseSearchEnabled || !Settings.ReverseSearchConsent)
+        {
+            return;
+        }
+
+        foreach (var item in Wallpapers)
+        {
+            if (item.Kind != WallpaperKind.ImageWallpaper ||
+                item.IsReverseSearching ||
+                item.ReverseStatus != ReverseSearchStatus.Idle)
+            {
+                continue;
+            }
+
+            try
+            {
+                var snapshot = await _reverse.TryGetCachedAsync(item);
+                if (snapshot is not null)
+                {
+                    await UiThread.RunAsync(() => item.ApplyReverseSearch(snapshot));
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Debug($"Reverse cache restore failed for '{item.Title}': {ex.Message}");
+            }
+        }
+    }
+
+    private async Task AutoSearchAsync(WallpaperSource item)
+    {
+        item.IsReverseSearching = true;
+        try
+        {
+            var snapshot = await _reverse.SearchAsync(item, automatic: true, ignoreCache: false, CancellationToken.None);
+            if (snapshot is not null)
+            {
+                await UiThread.RunAsync(() => item.ApplyReverseSearch(snapshot));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // The app is closing or the scan was replaced; nothing to report.
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Automatic reverse search failed for '{item.Title}'.", ex);
+        }
+        finally
+        {
+            await UiThread.RunAsync(() => item.IsReverseSearching = false);
+        }
+    }
+
+    private static string FormatTime(double seconds)
+    {
+        var time = TimeSpan.FromSeconds(Math.Max(0, seconds));
+        return time.TotalHours >= 1 ? time.ToString(@"h\:mm\:ss") : time.ToString(@"m\:ss");
+    }
+
+    private async Task LoadThumbnailAsync(WallpaperSource item)
+    {        try
         {
             var path = item.HasCandidate
                 ? item.CandidateFramePath

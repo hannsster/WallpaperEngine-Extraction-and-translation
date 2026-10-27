@@ -35,8 +35,10 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <Button Style="{StaticResource IconButton}" Content="&#xE72B;" ToolTip="Back to library"
-                        Command="{Binding BackCommand}" Margin="0,2,12,0" VerticalAlignment="Top" />
+                <Button Style="{StaticResource IconButton}" ToolTip="Back to library"
+                        Command="{Binding BackCommand}" Margin="0,2,12,0" VerticalAlignment="Top">
+                    <TextBlock Text="&#xE72B;" FontFamily="{StaticResource Font.Icon}" FontSize="12" />
+                </Button>
                 <StackPanel Grid.Column="1">
                     <TextBlock Text="{Binding Title}" Style="{StaticResource PageTitle}" TextTrimming="CharacterEllipsis"
                                MaxWidth="640" HorizontalAlignment="Left" />
@@ -180,6 +182,55 @@
                                            Style="{StaticResource Caption}" Foreground="{StaticResource Brush.Warning}"
                                            Margin="0,7,0,0"
                                            Visibility="{Binding HasFfmpeg, Converter={StaticResource InverseBoolToVisibility}}" />
+
+                                <Border Style="{StaticResource Divider}" Margin="0,13,0,0" />
+
+                                <Grid>
+                                    <TextBlock Text="FIND A BETTER FRAME" Style="{StaticResource Micro}" VerticalAlignment="Center" />
+                                    <Button Style="{StaticResource GhostButton}" Content="Sample frames"
+                                            HorizontalAlignment="Right" VerticalAlignment="Center"
+                                            FontSize="11.5" Padding="9,5"
+                                            Command="{Binding ScanFramesCommand}" />
+                                </Grid>
+                                <TextBlock Text="If the video opens on a fade, logo or black screen, sample it and pick the moment where the artwork is fully visible. The clearest frame is selected for you."
+                                           Style="{StaticResource Caption}" Margin="0,7,0,0" TextWrapping="Wrap" />
+
+                                <ProgressBar Style="{StaticResource SlimProgressBar}" IsIndeterminate="True" Margin="0,9,0,0"
+                                             Visibility="{Binding IsSampling, Converter={StaticResource BoolToVisibility}}" />
+
+                                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                                              Margin="0,9,0,0"
+                                              Visibility="{Binding HasFrameSamples, Converter={StaticResource BoolToVisibility}}">
+                                    <ItemsControl ItemsSource="{Binding FrameSamples}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <StackPanel Orientation="Horizontal" />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Button Style="{StaticResource FilmstripButton}"
+                                                        ToolTip="{Binding Label}"
+                                                        Command="{Binding DataContext.PickSampleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}">
+                                                    <StackPanel>
+                                                        <Border Height="44" CornerRadius="8,8,0,0">
+                                                            <Border.Background>
+                                                                <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                                            </Border.Background>
+                                                        </Border>
+                                                        <Border Background="#66070A10" CornerRadius="0,0,8,8" Padding="3,2">
+                                                            <TextBlock Text="{Binding Label}" FontSize="9.5" HorizontalAlignment="Center"
+                                                                       Foreground="{Binding Tone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}" />
+                                                        </Border>
+                                                    </StackPanel>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                                <TextBlock Text="{Binding FrameSamplesSummary}" Style="{StaticResource Micro}" Margin="0,5,0,0"
+                                           Visibility="{Binding HasFrameSamples, Converter={StaticResource BoolToVisibility}}" />
                             </StackPanel>
 
                             <!-- Scene tools -->
@@ -192,13 +243,146 @@
                                         Command="{Binding ScanEmbeddedCommand}" />
                             </StackPanel>
 
+                            <!-- Original artwork (reverse image search) -->
+                            <Border Style="{StaticResource Divider}" />
+
+                            <Grid>
+                                <TextBlock Text="ORIGINAL ARTWORK" Style="{StaticResource Micro}" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding ReverseProviderSummary}" Style="{StaticResource Micro}"
+                                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis" MaxWidth="200"
+                                           ToolTip="Providers used for reverse image search" />
+                            </Grid>
+
+                            <!-- Consent prompt -->
+                            <Border Style="{StaticResource InsetCard}" Padding="13,11" Margin="0,8,0,0"
+                                    Background="#1F6C9BFF" BorderBrush="#406C9BFF"
+                                    Visibility="{Binding ReverseConsentMissing, Converter={StaticResource BoolToVisibility}}">
+                                <StackPanel>
+                                    <TextBlock Text="Search the web for this artwork?" FontSize="12" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding ReverseConsentText}" Style="{StaticResource Caption}"
+                                               Margin="0,6,0,0" TextWrapping="Wrap" />
+                                    <Button Style="{StaticResource SmallButton}" Content="Turn on reverse image search"
+                                            HorizontalAlignment="Left" Margin="0,9,0,0"
+                                            Command="{Binding EnableReverseSearchCommand}" />
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Enabled but no usable provider -->
+                            <Border Style="{StaticResource InsetCard}" Padding="13,11" Margin="0,8,0,0"
+                                    Background="#1FF5C46B" BorderBrush="#4DF5C46B"
+                                    Visibility="{Binding ReverseNotConfigured, Converter={StaticResource BoolToVisibility}}">
+                                <StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#xE7BA;" FontFamily="{StaticResource Font.Icon}" FontSize="13"
+                                                   Foreground="{StaticResource Brush.Warning}" VerticalAlignment="Center" />
+                                        <TextBlock Text="No provider is ready yet" FontSize="12" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource Brush.Warning}" Margin="7,0,0,0" />
+                                    </StackPanel>
+                                    <TextBlock Text="Enable trace.moe (no key needed) or add a free SauceNAO / Google Vision API key in Settings, then search again."
+                                               Style="{StaticResource Caption}" Foreground="#F1DDB6"
+                                               Margin="0,7,0,0" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
+                            <ProgressBar Style="{StaticResource SlimProgressBar}" IsIndeterminate="True" Margin="0,9,0,0"
+                                         Visibility="{Binding Item.IsReverseSearching, Converter={StaticResource BoolToVisibility}}" />
+
+                            <TextBlock Text="{Binding Item.ReverseResultsHeader}" FontSize="12" FontWeight="SemiBold"
+                                       Margin="0,8,0,0" TextWrapping="Wrap"
+                                       Foreground="{Binding Item.ReverseResultsTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}"
+                                       Visibility="{Binding Item.ShowReverseStatus, Converter={StaticResource BoolToVisibility}}" />
+
+                            <TextBlock Text="{Binding Item.ReverseNote}" Style="{StaticResource Caption}" Margin="0,4,0,0"
+                                       TextWrapping="Wrap"
+                                       Visibility="{Binding Item.HasReverseNote, Converter={StaticResource BoolToVisibility}}" />
+
+                            <ItemsControl ItemsSource="{Binding Item.ReverseResults}" Margin="0,8,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Style="{StaticResource InsetCard}" Padding="9" Margin="0,0,0,8">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="64" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+
+                                                <Border Width="64" Height="64" CornerRadius="9" Background="#0E141F"
+                                                        VerticalAlignment="Top">
+                                                    <Grid>
+                                                        <Border CornerRadius="9">
+                                                            <Border.Background>
+                                                                <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                                            </Border.Background>
+                                                        </Border>
+                                                        <TextBlock Text="&#xE8B9;" FontFamily="{StaticResource Font.Icon}" FontSize="18"
+                                                                   Foreground="#3DFFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                                   Visibility="{Binding Thumbnail, Converter={StaticResource NullToVisibility}, ConverterParameter=invert}" />
+                                                    </Grid>
+                                                </Border>
+
+                                                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                                    <TextBlock Text="{Binding Header}" FontSize="12" FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis" ToolTip="{Binding Title}" />
+                                                    <TextBlock Text="{Binding Subheader}" Style="{StaticResource Micro}"
+                                                               Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
+
+                                                    <WrapPanel Margin="0,6,0,0">
+                                                        <Border Style="{StaticResource Chip}" Padding="6,2" Margin="0,0,5,0"
+                                                                Background="{Binding SizeTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                                                                BorderBrush="{Binding SizeTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+                                                            <TextBlock Text="{Binding SizeBadge}" Style="{StaticResource ChipText}"
+                                                                       FontSize="10"
+                                                                       Foreground="{Binding SizeTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}" />
+                                                        </Border>
+                                                        <Border Style="{StaticResource Chip}" Padding="6,2" Margin="0,0,5,0"
+                                                                Background="#14FFFFFF" BorderBrush="#26FFFFFF">
+                                                            <TextBlock Text="{Binding ResolutionText}" Style="{StaticResource ChipText}" FontSize="10"
+                                                                       Foreground="{StaticResource Brush.TextSecondary}" />
+                                                        </Border>
+                                                        <Border Style="{StaticResource Chip}" Padding="6,2"
+                                                                Background="#14FFFFFF" BorderBrush="#26FFFFFF">
+                                                            <TextBlock Text="{Binding SimilarityText}" Style="{StaticResource ChipText}" FontSize="10"
+                                                                       Foreground="{StaticResource Brush.TextPrimary}" />
+                                                        </Border>
+                                                    </WrapPanel>
+
+                                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                                        <Button Style="{StaticResource SmallButton}" Content="Open page"
+                                                                FontSize="11" Padding="8,4"
+                                                                Command="{Binding DataContext.OpenResultCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Visibility="{Binding HasPage, Converter={StaticResource BoolToVisibility}}" />
+                                                        <Button Style="{StaticResource SmallButton}" Content="Use image"
+                                                                FontSize="11" Padding="8,4" Margin="6,0,0,0"
+                                                                ToolTip="Download this image and make it the export candidate"
+                                                                Command="{Binding DataContext.UseResultCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                                CommandParameter="{Binding}"
+                                                                Visibility="{Binding CanUseImage, Converter={StaticResource BoolToVisibility}}" />
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <Button Style="{StaticResource SmallButton}" Content="Search again" HorizontalAlignment="Left"
+                                    Margin="0,2,0,0"
+                                    Command="{Binding SearchOriginalCommand}"
+                                    Visibility="{Binding ReverseReady, Converter={StaticResource BoolToVisibility}}" />
+
+                            <TextBlock Text="Only a 1280-pixel copy of this frame is uploaded. Nothing is downloaded unless you choose a match, and every result stays a suggestion until you approve it."
+                                       Style="{StaticResource Micro}" Margin="0,9,0,0" TextWrapping="Wrap" />
+
                             <Border Style="{StaticResource Divider}" />
 
                             <!-- Actions -->
                             <StackPanel>
                                 <TextBlock Text="DECISION" Style="{StaticResource Micro}" Margin="0,0,0,4" />
-                                <TextBlock Text="{Binding ApprovalStatusLabel}" Style="{StaticResource Caption}" Margin="0,0,0,10" />
-                                <Grid>
+                                <TextBlock Text="{Binding ApprovalStatusLabel}" Style="{StaticResource Caption}" Margin="0,0,0,10"
+                                           Visibility="{Binding NeedsDecision, Converter={StaticResource BoolToVisibility}}" />
+                                <Grid Visibility="{Binding NeedsDecision, Converter={StaticResource BoolToVisibility}}">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*" />
                                         <ColumnDefinition Width="Auto" />
@@ -208,10 +392,14 @@
                                     <Button Grid.Column="1" Style="{StaticResource DangerButton}" Content="Toss"
                                             Margin="8,0,0,0" Command="{Binding TossCommand}" />
                                 </Grid>
+                                <TextBlock Text="This image is already usable, so there is nothing to approve. Choosing a match below replaces the candidate and asks you to confirm it first."
+                                           Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,0,0,10"
+                                           Visibility="{Binding NeedsDecision, Converter={StaticResource InverseBoolToVisibility}}" />
                                 <Button Style="{StaticResource SecondaryButton}" Content="Choose a different image…"
                                         Margin="0,8,0,0" Command="{Binding ChooseImageCommand}" />
                                 <TextBlock Text="Approved frames are exported as high-quality JPEGs. Videos and scenes are never exported without this step."
-                                           Style="{StaticResource Micro}" Margin="0,10,0,0" />
+                                           Style="{StaticResource Micro}" Margin="0,10,0,0"
+                                           Visibility="{Binding NeedsDecision, Converter={StaticResource BoolToVisibility}}" />
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>

@@ -731,4 +731,34 @@
         <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
+    <!-- One frame in the review filmstrip. Selected frames get an accent ring. -->
+    <Style x:Key="FilmstripButton" TargetType="Button">
+        <Setter Property="Width" Value="78" />
+        <Setter Property="Margin" Value="0,0,8,0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Root" CornerRadius="10" Background="#0E141F"
+                            BorderBrush="#24FFFFFF" BorderThickness="1.5">
+                        <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="#66FFFFFF" />
+                        </Trigger>
+                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Brush.Accent}" />
+                            <Setter TargetName="Root" Property="Background" Value="#1F6C9BFF" />
+                        </DataTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>

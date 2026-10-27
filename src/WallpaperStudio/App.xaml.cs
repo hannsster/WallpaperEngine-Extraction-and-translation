@@ -56,6 +56,7 @@ public partial class App : Application
         var thumbnails = new ThumbnailService();
         var pkgPreviews = new PkgPreviewExtractor();
         var sceneFrames = new SceneFrameExtractor();
+        var reverse = new Services.ReverseSearch.ReverseSearchService(_settings, thumbnails);
         var scanner = new SourceScanner(images, ffmpeg, sceneFrames);
         var hashing = new HashingService();
         var exports = new ExportService(_state);
@@ -68,10 +69,10 @@ public partial class App : Application
         var shell = new ShellState();
 
         var library = new LibraryViewModel(
-            _settings, _state, scanner, hashing, thumbnails, exports, ffmpeg, pkgPreviews, sceneFrames, dialogs, shell);
+            _settings, _state, scanner, hashing, thumbnails, exports, ffmpeg, pkgPreviews, sceneFrames, reverse, dialogs, shell);
 
         var approval = new ApprovalViewModel(
-            ffmpeg, thumbnails, pkgPreviews, sceneFrames, _state, _settings, dialogs, shell);
+            ffmpeg, thumbnails, pkgPreviews, sceneFrames, reverse, _state, _settings, dialogs, shell);
 
         var import = new ImportViewModel(
             imports, _settings, wallpaperEngine, thumbnails, dialogs, shell);
@@ -80,7 +81,7 @@ public partial class App : Application
             _settings, _state, steamCmd, projectBuilder, thumbnails, dialogs, shell);
 
         var settings = new SettingsViewModel(
-            _settings, ffmpeg, wallpaperEngine, steamCmd, _state, dialogs, shell);
+            _settings, ffmpeg, wallpaperEngine, steamCmd, _state, reverse, dialogs, shell);
 
         var main = new MainViewModel(
             library, approval, import, publish, settings, shell, _settings, _state, ffmpeg, dialogs);

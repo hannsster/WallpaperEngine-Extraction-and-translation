@@ -17,6 +17,10 @@ public static class AppPaths
     public static string CacheDirectory => Path.Combine(DataDirectory, "cache");
     public static string ThumbnailCacheDirectory => Path.Combine(CacheDirectory, "thumbs");
     public static string FrameCacheDirectory => Path.Combine(CacheDirectory, "frames");
+    public static string ReverseSearchCacheDirectory => Path.Combine(CacheDirectory, "reverse");
+    public static string ReverseSearchThumbnailDirectory => Path.Combine(ReverseSearchCacheDirectory, "thumbs");
+    public static string ReverseSearchQueryDirectory => Path.Combine(ReverseSearchCacheDirectory, "queries");
+    public static string ReverseSearchUsageFile => Path.Combine(ReverseSearchCacheDirectory, "usage.json");
     public static string PublishDirectory => Path.Combine(DataDirectory, "publish");
     public static string DefaultExportDirectory { get; private set; } = string.Empty;
     public static bool PortableMode { get; private set; }
@@ -55,6 +59,9 @@ public static class AppPaths
         Directory.CreateDirectory(CacheDirectory);
         Directory.CreateDirectory(ThumbnailCacheDirectory);
         Directory.CreateDirectory(FrameCacheDirectory);
+        Directory.CreateDirectory(ReverseSearchCacheDirectory);
+        Directory.CreateDirectory(ReverseSearchThumbnailDirectory);
+        Directory.CreateDirectory(ReverseSearchQueryDirectory);
         Directory.CreateDirectory(PublishDirectory);
     }
 

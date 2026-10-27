@@ -1,5 +1,7 @@
+using System.Collections.ObjectModel;
 using System.Windows.Media;
 using System.Windows.Input;
+using WallpaperStudio.Services.ReverseSearch;
 
 namespace WallpaperStudio.ViewModels;
 
@@ -15,6 +17,7 @@ public sealed class ApprovalViewModel : ObservableObject
     private readonly ThumbnailService _thumbnails;
     private readonly PkgPreviewExtractor _pkgPreviews;
     private readonly SceneFrameExtractor _sceneFrames;
+    private readonly ReverseSearchService _reverse;
     private readonly StateStore _state;
     private readonly SettingsService _settingsService;
     private readonly DialogService _dialogs;
@@ -22,12 +25,15 @@ public sealed class ApprovalViewModel : ObservableObject
     private readonly AsyncRelayCommand _approveCommand;
     private readonly AsyncRelayCommand _regenerateCommand;
     private readonly AsyncRelayCommand _scanEmbeddedCommand;
+    private readonly AsyncRelayCommand _searchOriginalCommand;
+    private readonly AsyncRelayCommand _scanFramesCommand;
 
     private WallpaperSource? _item;
     private ImageSource? _previewImage;
     private string? _previewPath;
     private bool _isBusy;
     private bool _isExtracting;
+    private bool _isSampling;
     private string _busyMessage = string.Empty;
     private double _frameTimestamp;
     private string? _notice;
@@ -38,6 +44,7 @@ public sealed class ApprovalViewModel : ObservableObject
         ThumbnailService thumbnails,
         PkgPreviewExtractor pkgPreviews,
         SceneFrameExtractor sceneFrames,
+        ReverseSearchService reverse,
         StateStore state,
         SettingsService settingsService,
         DialogService dialogs,
@@ -47,10 +54,13 @@ public sealed class ApprovalViewModel : ObservableObject
         _thumbnails = thumbnails;
         _pkgPreviews = pkgPreviews;
         _sceneFrames = sceneFrames;
+        _reverse = reverse;
         _state = state;
         _settingsService = settingsService;
         _dialogs = dialogs;
         _shell = shell;
+
+        FrameSamples.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasFrameSamples), nameof(FrameSamplesSummary));
 
         _approveCommand = new AsyncRelayCommand(ApproveAsync, () => Item is not null && HasPreview && !IsBusy);
         _approveCommand.ExecutionFailed += (_, ex) => _dialogs.ShowError("Could not approve", ex.Message, ex);
@@ -61,9 +71,25 @@ public sealed class ApprovalViewModel : ObservableObject
         _scanEmbeddedCommand = new AsyncRelayCommand(ScanEmbeddedAsync, () => Item is not null && Item.Kind == WallpaperKind.SceneProject && !HasPreview && !IsBusy);
         _scanEmbeddedCommand.ExecutionFailed += (_, ex) => _dialogs.ShowError("Preview scan failed", ex.Message, ex);
 
+        _searchOriginalCommand = new AsyncRelayCommand(
+            () => RunSearchAsync(automatic: false, ignoreCache: true),
+            () => Item is not null && HasPreview && !IsBusy);
+        _searchOriginalCommand.ExecutionFailed += (_, ex) => _dialogs.ShowError("Reverse image search failed", ex.Message, ex);
+
+        _scanFramesCommand = new AsyncRelayCommand(
+            () => ScanFramesAsync(autoSelect: false),
+            () => IsVideo && HasFfmpeg && DurationSeconds > 2 && !IsBusy);
+        _scanFramesCommand.ExecutionFailed += (_, ex) => _dialogs.ShowError("Frame sampling failed", ex.Message, ex);
+
         ApproveCommand = _approveCommand;
         RegenerateCommand = _regenerateCommand;
         ScanEmbeddedCommand = _scanEmbeddedCommand;
+        SearchOriginalCommand = _searchOriginalCommand;
+        ScanFramesCommand = _scanFramesCommand;
+        EnableReverseSearchCommand = new RelayCommand(EnableReverseSearch);
+        OpenResultCommand = new RelayCommand<ReverseSearchResult>(OpenResult);
+        UseResultCommand = new RelayCommand<ReverseSearchResult>(result => _ = UseResultAsync(result));
+        PickSampleCommand = new RelayCommand<FrameSample>(sample => _ = PickSampleAsync(sample));
         TossCommand = new RelayCommand(Toss, () => Item is not null);
         ChooseImageCommand = new AsyncRelayCommand(ChooseImageAsync, () => Item is not null && !IsBusy);
         OpenFileLocationCommand = new RelayCommand(OpenFileLocation, () => Item is not null);
@@ -86,8 +112,13 @@ public sealed class ApprovalViewModel : ObservableObject
                     nameof(HasItem), nameof(Title), nameof(SourcePath), nameof(KindGlyph), nameof(SourceTypeLabel),
                     nameof(ResolutionDetail), nameof(MetadataSummary), nameof(IsVideo), nameof(IsScene), nameof(HasFfmpeg),
                     nameof(DurationSeconds), nameof(MaxTimestamp), nameof(CanScrub), nameof(FallbackNotice), nameof(HasFallbackNotice),
-                    nameof(CandidateSourceLabel), nameof(ApprovalStatusLabel), nameof(IsAlreadyApproved));
+                    nameof(CandidateSourceLabel), nameof(ApprovalStatusLabel), nameof(IsAlreadyApproved),
+                    nameof(NeedsDecision));
+                FrameSamples.Clear();
                 RaiseCommandStates();
+                OnPropertyChanged(
+                    nameof(ReverseConsentMissing), nameof(ReverseNotConfigured), nameof(ReverseReady),
+                    nameof(ReverseProviderSummary), nameof(HasFrameSamples), nameof(FrameSamplesSummary));
             }
         }
     }
@@ -123,6 +154,9 @@ public sealed class ApprovalViewModel : ObservableObject
     public string CandidateSourceLabel => Item?.CandidateSourceLabel ?? string.Empty;
 
     public bool IsAlreadyApproved => Item?.ApprovalStatus == ApprovalStatus.Approved;
+
+    /// <summary>True for videos, scenes and fallbacks that must be approved before export.</summary>
+    public bool NeedsDecision => Item?.RequiresApproval == true;
 
     public string ApprovalStatusLabel => Item?.ApprovalStatus switch
     {
@@ -228,6 +262,7 @@ public sealed class ApprovalViewModel : ObservableObject
     public void RefreshToolchainState()
     {
         OnPropertyChanged(nameof(HasFfmpeg), nameof(CanScrub), nameof(EffectiveExportFolder));
+        RefreshReverseState();
         RaiseCommandStates();
     }
 
@@ -239,9 +274,61 @@ public sealed class ApprovalViewModel : ObservableObject
     public ICommand OpenFileLocationCommand { get; }
     public ICommand OpenExportFolderCommand { get; }
     public ICommand BackCommand { get; }
+    public ICommand SearchOriginalCommand { get; }
+    public ICommand ScanFramesCommand { get; }
+    public ICommand EnableReverseSearchCommand { get; }
+    public ICommand OpenResultCommand { get; }
+    public ICommand UseResultCommand { get; }
+    public ICommand PickSampleCommand { get; }
+
+    public ObservableCollection<FrameSample> FrameSamples { get; } = [];
+
+    public bool HasFrameSamples => FrameSamples.Count > 0;
+
+    public string FrameSamplesSummary => FrameSamples.Count == 0
+        ? string.Empty
+        : $"{FrameSamples.Count} frames · pick the one where the artwork is clearest";
+
+    public bool IsSampling
+    {
+        get => _isSampling;
+        private set
+        {
+            if (SetProperty(ref _isSampling, value))
+            {
+                OnPropertyChanged(nameof(IsNotSampling));
+            }
+        }
+    }
+
+    public bool IsNotSampling => !_isSampling;
+
+    public bool ReverseConsentMissing => !_settingsService.Current.ReverseSearchConsent;
+
+    public bool ReverseReady => _reverse.IsReady;
+
+    public bool ReverseNotConfigured => !ReverseConsentMissing && !_reverse.IsReady;
+
+    public string ReverseProviderSummary => _reverse.ActiveProviders.Count == 0
+        ? "No provider is configured yet"
+        : string.Join(" + ", _reverse.ActiveProviders);
+
+    public string ReverseConsentText =>
+        "Wallpaper Studio can upload a 1280-pixel copy of this frame to " +
+        string.Join(", ", _reverse.ProviderLabels) +
+        " to look for the original artwork. Only the downscaled copy is sent, and you choose whether to download a match.";
+
+    /// <summary>Called after Settings changes so the prompts and chips update.</summary>
+    public void RefreshReverseState()
+    {
+        OnPropertyChanged(
+            nameof(ReverseConsentMissing), nameof(ReverseNotConfigured), nameof(ReverseReady),
+            nameof(ReverseProviderSummary), nameof(ReverseConsentText));
+        RaiseCommandStates();
+    }
 
     /// <summary>Loads a source for review, reusing an existing candidate when possible.</summary>
-    public Task LoadAsync(WallpaperSource item)
+    public async Task LoadAsync(WallpaperSource item)
     {
         _loadCts?.Cancel();
         _loadCts?.Dispose();
@@ -259,10 +346,357 @@ public sealed class ApprovalViewModel : ObservableObject
             FrameTimestamp = Math.Clamp(FrameTimestamp, 0, Math.Max(0, item.DurationSeconds - 0.1));
         }
 
-        return LoadPreviewAsync(item, token, autoExtract: true);
+        await LoadPreviewAsync(item, token, autoExtract: true);
+
+        // A video often opens on a fade-in, logo or black frame. Detect that and
+        // immediately offer a filmstrip with the best frame pre-selected.
+        if (HasPreview && IsVideo && item.DurationSeconds >= 4 && !token.IsCancellationRequested)
+        {
+            var path = item.CandidateFramePath ?? item.PreviewPath;
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                var quality = await Task.Run(() => FrameAnalyzer.AnalyzeFile(path!), token);
+                if (quality.IsWeak)
+                {
+                    await ScanFramesAsync(autoSelect: true, token);
+                }
+            }
+        }
+
+        MaybeAutoSearch();
     }
 
-    private async Task LoadPreviewAsync(WallpaperSource item, CancellationToken token, bool autoExtract)
+    /// <summary>Runs a search without blocking the preview if the user has opted in.</summary>
+    public void MaybeAutoSearch()
+    {
+        var settings = _settingsService.Current;
+        if (!settings.ReverseSearchEnabled || !settings.ReverseSearchConsent || !settings.ReverseSearchAutomatic)
+        {
+            return;
+        }
+
+        if (Item is null || !Item.HasCandidate || Item.UsesPreviewFallback || Item.IsReverseSearching)
+        {
+            return;
+        }
+
+        if (Item.ReverseResults.Count > 0)
+        {
+            return;
+        }
+
+        _ = RunSearchAsync(automatic: true, ignoreCache: false);
+    }
+
+    private async Task RunSearchAsync(bool automatic, bool ignoreCache)
+    {
+        var item = Item;
+        if (item is null || !item.HasCandidate || item.IsReverseSearching)
+        {
+            return;
+        }
+
+        item.IsReverseSearching = true;
+        try
+        {
+            var snapshot = await _reverse.SearchAsync(item, automatic, ignoreCache, _loadCts?.Token ?? CancellationToken.None);
+            if (snapshot is null)
+            {
+                return;
+            }
+
+            item.ApplyReverseSearch(snapshot);
+            if (snapshot.Status == ReverseSearchStatus.Error && snapshot.Note is not null)
+            {
+                Notice = snapshot.Note;
+            }
+            else if (snapshot.Results.Count > 0)
+            {
+                _shell.ReportText(snapshot.HasBetterOriginal
+                    ? $"Found a higher-resolution original for {item.Title}."
+                    : $"Found {snapshot.Results.Count} source match(es) for {item.Title}.");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Navigating away cancels the review load; the search result is cached anyway.
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Reverse search failed for '{item.Title}'.", ex);
+            Notice = "The reverse image search failed. See the log for details.";
+        }
+        finally
+        {
+            item.IsReverseSearching = false;
+        }
+    }
+
+    private void EnableReverseSearch()
+    {
+        var settings = _settingsService.Current;
+        if (!_dialogs.Confirm("Turn on reverse image search?",
+                "To find the original artwork, Wallpaper Studio uploads a 1280-pixel JPEG copy of the extracted frame to the providers you enable:\n\n" +
+                "• SauceNAO - finds Pixiv and booru sources (needs a free API key)\n" +
+                "• trace.moe - identifies anime scenes (keyless)\n" +
+                "• Google Vision - finds pages with the same or similar image (needs a key)\n\n" +
+                "No full-size image is ever downloaded unless you choose a result. You can turn this off at any time in Settings."))
+        {
+            return;
+        }
+
+        settings.ReverseSearchEnabled = true;
+        settings.ReverseSearchConsent = true;
+        try
+        {
+            _settingsService.Save();
+        }
+        catch (Exception ex)
+        {
+            _dialogs.ShowError("Could not save the setting", "Reverse search is on for this session, but settings.json could not be updated.", ex);
+        }
+
+        RefreshReverseState();
+        Notice = "Reverse image search is on. Searching this frame now.";
+        _ = RunSearchAsync(automatic: false, ignoreCache: true);
+    }
+
+    private async Task ScanFramesAsync(bool autoSelect, CancellationToken? externalToken = null)
+    {
+        if (Item is null || !IsVideo)
+        {
+            return;
+        }
+
+        if (!HasFfmpeg)
+        {
+            _dialogs.ShowWarning("FFmpeg not found",
+                "FFmpeg is needed to sample video frames. Set the FFmpeg folder in Settings, or place ffmpeg.exe in an 'ffmpeg' subfolder next to the app.");
+            return;
+        }
+
+        var token = externalToken ?? _loadCts?.Token ?? CancellationToken.None;
+        IsSampling = true;
+        IsBusy = true;
+        BusyMessage = "Sampling frames across the video…";
+        try
+        {
+            var samples = await _ffmpeg.ExtractFilmstripAsync(
+                Item.PrimaryFilePath, Item.DurationSeconds, 12, Item.FileHash, token);
+            token.ThrowIfCancellationRequested();
+
+            if (samples.Count == 0)
+            {
+                Notice = "No frames could be sampled from this video. Try regenerating a frame at a specific time.";
+                return;
+            }
+
+            FrameSamples.Clear();
+            foreach (var sample in samples)
+            {
+                sample.Thumbnail = await _thumbnails.GetAsync(sample.Path, 240, "filmstrip", token);
+                FrameSamples.Add(sample);
+            }
+
+            var selected = samples
+                .Where(sample => !sample.IsWeak)
+                .OrderByDescending(sample => sample.Score)
+                .FirstOrDefault();
+
+            if (autoSelect && selected is not null)
+            {
+                await SelectSampleAsync(selected, token);
+                Notice = Item?.CandidateNote ?? $"Picked the clearest of {samples.Count} sampled frames.";
+            }
+            else
+            {
+                var isWeak = selected is null;
+                Notice = isWeak
+                    ? "Every sampled frame looks dark or flat. Scrub the timestamp and try a different moment."
+                    : $"Sampled {samples.Count} frames. Click the frame where the artwork is clearest to search from it.";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer review request superseded this one.
+        }
+        catch (Exception ex)
+        {
+            Notice = "Frame sampling failed. The video may use an unsupported codec.";
+            Logger.Warn($"Frame sampling failed for '{Item?.SourcePath}'.", ex);
+        }
+        finally
+        {
+            IsSampling = false;
+            IsBusy = false;
+            BusyMessage = string.Empty;
+            RaiseCommandStates();
+        }
+    }
+
+    private async Task PickSampleAsync(FrameSample? sample)
+    {
+        if (Item is null || sample is null)
+        {
+            return;
+        }
+
+        await SelectSampleAsync(sample, _loadCts?.Token ?? CancellationToken.None);
+    }
+
+    private async Task SelectSampleAsync(FrameSample sample, CancellationToken token)
+    {
+        if (Item is null)
+        {
+            return;
+        }
+
+        try
+        {
+            IsBusy = true;
+            BusyMessage = $"Extracting the frame at {sample.TimeText}…";
+
+            foreach (var item in FrameSamples)
+            {
+                item.IsSelected = ReferenceEquals(item, sample);
+            }
+
+            FrameTimestamp = sample.TimeSeconds;
+
+            var stem = string.IsNullOrWhiteSpace(Item.FileHash)
+                ? "video"
+                : Item.FileHash[..Math.Min(16, Item.FileHash.Length)];
+            var output = Path.Combine(AppPaths.FrameCacheDirectory, $"review-{stem}-{sample.TimeSeconds:0.###}.png");
+
+            var result = await _ffmpeg.ExtractFrameAsync(Item.PrimaryFilePath, sample.TimeSeconds, output, token);
+            token.ThrowIfCancellationRequested();
+
+            Item.CandidateFramePath = result.Path;
+            Item.CandidateFrameTime = result.TimeSeconds;
+            Item.UsesPreviewFallback = false;
+            Item.CandidateNote = $"Using the frame at {FormatTime(result.TimeSeconds)} (sharpness score {sample.Score:0}/100).";
+            Item.ResetReverseSearch();
+
+            await ShowPreviewAsync(result.Path, token);
+            Notice = $"Frame at {FormatTime(result.TimeSeconds)} selected. Searching for its source…";
+
+            if (_settingsService.Current.ReverseSearchEnabled && _settingsService.Current.ReverseSearchConsent)
+            {
+                _ = RunSearchAsync(automatic: false, ignoreCache: true);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore: a newer selection superseded this one.
+        }
+        catch (Exception ex)
+        {
+            Notice = "The selected frame could not be extracted.";
+            Logger.Warn($"Selecting a sampled frame failed for '{Item?.SourcePath}'.", ex);
+        }
+        finally
+        {
+            IsBusy = false;
+            BusyMessage = string.Empty;
+            RaiseCommandStates();
+        }
+    }
+
+    private void OpenResult(ReverseSearchResult? result)
+    {
+        var url = result?.PageUrl ?? result?.ImageUrl;
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            _dialogs.ShowInfo("No link", "This match does not include a page link.");
+            return;
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = url,
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            _dialogs.ShowError("Could not open the link", url, ex);
+        }
+    }
+
+    private async Task UseResultAsync(ReverseSearchResult? result)
+    {
+        if (Item is null || result is null)
+        {
+            return;
+        }
+
+        if (!result.CanUseImage)
+        {
+            _dialogs.ShowInfo("Open the page instead",
+                "This match identifies the source but does not expose a direct image file. Open the page to view or download it yourself.");
+            OpenResult(result);
+            return;
+        }
+
+        var size = result.Width > 0 && result.Height > 0 ? result.ResolutionText : "unknown resolution";
+        if (!_dialogs.Confirm("Use this image as the export candidate?",
+                $"{result.Header}\n{result.Subheader}\n\n{size} from {result.SourceName}.\n\n" +
+                "Wallpaper Studio will download this one image, check that it decodes, and apply the 1080p rule. " +
+                "Nothing is exported until you approve the frame."))
+        {
+            return;
+        }
+
+        IsBusy = true;
+        BusyMessage = "Downloading the original…";
+        try
+        {
+            var token = _loadCts?.Token ?? CancellationToken.None;
+            var downloaded = await _reverse.DownloadOriginalAsync(result, token);
+
+            if (_settingsService.Current.EnforceMinimumResolution &&
+                !downloaded.Resolution.PassesMinimum1080p)
+            {
+                _dialogs.ShowWarning("Below the 1080p rule",
+                    $"{downloaded.Resolution.Display} does not meet the 1080p rule ({ResolutionRules.Explain(downloaded.Resolution.Width, downloaded.Resolution.Height)}).\n\n" +
+                    "It was not applied. Choose another match, or turn the rule off in Settings if you really want this size.");
+                return;
+            }
+
+            Item.CandidateFramePath = downloaded.Path;
+            Item.UsesPreviewFallback = false;
+            Item.Resolution = downloaded.Resolution;
+            Item.CandidateNote = $"Using the {downloaded.Resolution.Display} original from {result.SourceName}.";
+            Item.ApprovalStatus = ApprovalStatus.Pending;
+            Item.Status = SourceStatus.NeedsReview;
+
+            await ShowPreviewAsync(downloaded.Path, token);
+            Notice = downloaded.Quality.Summary.Contains("black", StringComparison.OrdinalIgnoreCase)
+                ? "The downloaded image is very dark. Check it carefully before approving."
+                : "The downloaded original is now the export candidate. Approve it if it looks right.";
+            _shell.ReportText($"Downloaded {downloaded.Resolution.Display} from {result.SourceName}.");
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore.
+        }
+        catch (ReverseSearchProviderException ex)
+        {
+            _dialogs.ShowWarning("Could not download that image", ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _dialogs.ShowError("Could not download that image", ex.Message, ex);
+        }
+        finally
+        {
+            IsBusy = false;
+            BusyMessage = string.Empty;
+            RaiseCommandStates();
+        }
+    }    private async Task LoadPreviewAsync(WallpaperSource item, CancellationToken token, bool autoExtract)
     {
         var existing = item.HasCandidate ? item.CandidateFramePath : null;
         if (existing is not null && (!item.UsesPreviewFallback || item.ApprovalStatus == ApprovalStatus.Approved))
@@ -281,8 +715,12 @@ public sealed class ApprovalViewModel : ObservableObject
             }
         }
 
-        // Scene/project sources may only have a preview asset.
-        if (!string.IsNullOrWhiteSpace(item.PreviewPath) && File.Exists(PathHelper.ToExtendedPath(item.PreviewPath)))
+        // Scene/project sources may only have a preview asset. Videos are handled
+        // below, because a real extracted frame is always better than the preview
+        // GIF that Wallpaper Engine ships with many video wallpapers.
+        if (item.Kind != WallpaperKind.VideoWallpaper &&
+            !string.IsNullOrWhiteSpace(item.PreviewPath) &&
+            File.Exists(PathHelper.ToExtendedPath(item.PreviewPath)))
         {
             item.CandidateFramePath = item.PreviewPath;
             item.UsesPreviewFallback = true;
@@ -293,7 +731,21 @@ public sealed class ApprovalViewModel : ObservableObject
         if (item.Kind == WallpaperKind.VideoWallpaper && autoExtract)
         {
             await ExtractFrameAsync(item, FrameTimestamp, token, showErrors: false);
-            return;
+            if (HasPreview)
+            {
+                return;
+            }
+
+            // Extraction failed (unsupported codec or missing FFmpeg). Fall back to
+            // the labelled preview so the review screen still shows something.
+            if (!string.IsNullOrWhiteSpace(item.PreviewPath) &&
+                File.Exists(PathHelper.ToExtendedPath(item.PreviewPath)))
+            {
+                item.CandidateFramePath = item.PreviewPath;
+                item.UsesPreviewFallback = true;
+                await ShowPreviewAsync(item.PreviewPath, token);
+                return;
+            }
         }
 
         PreviewImage = null;
@@ -652,6 +1104,8 @@ public sealed class ApprovalViewModel : ObservableObject
         _approveCommand.RaiseCanExecuteChanged();
         _regenerateCommand.RaiseCanExecuteChanged();
         _scanEmbeddedCommand.RaiseCanExecuteChanged();
+        _searchOriginalCommand.RaiseCanExecuteChanged();
+        _scanFramesCommand.RaiseCanExecuteChanged();
         if (TossCommand is RelayCommand toss)
         {
             toss.RaiseCanExecuteChanged();

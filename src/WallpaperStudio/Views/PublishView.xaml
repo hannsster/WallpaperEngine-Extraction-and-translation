@@ -225,16 +225,22 @@
                                                     Command="{Binding DataContext.PublishItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
                                                     IsEnabled="{Binding CanPublish}" />
-                                            <Button Style="{StaticResource IconButton}" Content="&#xE8B7;" ToolTip="Open content folder" Margin="0,0,6,0"
+                                            <Button Style="{StaticResource IconButton}" ToolTip="Open content folder" Margin="0,0,6,0"
                                                     Command="{Binding DataContext.OpenItemFolderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                    CommandParameter="{Binding}" />
-                                            <Button Style="{StaticResource IconButton}" Content="&#xE8A7;" ToolTip="Open Workshop page" Margin="0,0,6,0"
+                                                    CommandParameter="{Binding}">
+                                                <TextBlock Text="&#xE8B7;" FontFamily="{StaticResource Font.Icon}" FontSize="12" />
+                                            </Button>
+                                            <Button Style="{StaticResource IconButton}" ToolTip="Open Workshop page" Margin="0,0,6,0"
                                                     Command="{Binding DataContext.OpenWorkshopPageCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                     CommandParameter="{Binding}"
-                                                    Visibility="{Binding HasWorkshopLink, Converter={StaticResource BoolToVisibility}}" />
-                                            <Button Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Remove from list"
+                                                    Visibility="{Binding HasWorkshopLink, Converter={StaticResource BoolToVisibility}}">
+                                                <TextBlock Text="&#xE8A7;" FontFamily="{StaticResource Font.Icon}" FontSize="12" />
+                                            </Button>
+                                            <Button Style="{StaticResource IconButton}" ToolTip="Remove from list"
                                                     Command="{Binding DataContext.RemoveItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                    CommandParameter="{Binding}" />
+                                                    CommandParameter="{Binding}">
+                                                <TextBlock Text="&#xE74D;" FontFamily="{StaticResource Font.Icon}" FontSize="12" />
+                                            </Button>
                                         </StackPanel>
                                     </Grid>
 

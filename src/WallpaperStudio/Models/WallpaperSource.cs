@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Windows.Media;
 using WallpaperStudio.Infrastructure;
 
@@ -28,6 +29,180 @@ public sealed class WallpaperSource : ObservableObject
     private bool _isThumbnailLoading;
     private ImageSource? _thumbnail;
     private bool _isPreviewLoading;
+    private ReverseSearchStatus _reverseStatus = ReverseSearchStatus.Idle;
+    private string? _reverseNote;
+    private string? _reverseQueryPath;
+    private DateTimeOffset? _reverseSearchedAt;
+    private bool _isReverseSearching;
+    private string? _candidateNote;
+
+    public WallpaperSource()
+    {
+        ReverseResults.CollectionChanged += (_, _) =>
+        {
+            OnPropertyChanged(
+                nameof(HasReverseResults),
+                nameof(HasBetterOriginal),
+                nameof(HasReverseMatches),
+                nameof(BestOriginal),
+                nameof(OriginalChipText),
+                nameof(ReverseResultsHeader),
+                nameof(ReverseResultsTone),
+                nameof(ShowReverseStatus),
+                nameof(ShowReverseStatusChip));
+        };
+    }
+
+    /// <summary>Original-artwork matches found by reverse image search.</summary>
+    public ObservableCollection<ReverseSearchResult> ReverseResults { get; } = [];
+
+    /// <summary>A short note about the chosen candidate, e.g. why a different frame was picked.</summary>
+    public string? CandidateNote
+    {
+        get => _candidateNote;
+        set
+        {
+            if (SetProperty(ref _candidateNote, value))
+            {
+                OnPropertyChanged(nameof(HasCandidateNote));
+            }
+        }
+    }
+
+    public bool HasCandidateNote => !string.IsNullOrWhiteSpace(CandidateNote);
+
+    public ReverseSearchStatus ReverseStatus
+    {
+        get => _reverseStatus;
+        set
+        {
+            if (SetProperty(ref _reverseStatus, value))
+            {
+                OnPropertyChanged(nameof(ReverseStatusLabel), nameof(ReverseStatusTone), nameof(ReverseResultsHeader), nameof(ReverseResultsTone), nameof(ShowReverseStatus), nameof(ShowReverseStatusChip));
+            }
+        }
+    }
+
+    public string? ReverseNote
+    {
+        get => _reverseNote;
+        set
+        {
+            if (SetProperty(ref _reverseNote, value))
+            {
+                OnPropertyChanged(nameof(HasReverseNote));
+            }
+        }
+    }
+
+    public bool HasReverseNote => !string.IsNullOrWhiteSpace(ReverseNote);
+
+    /// <summary>Downscaled JPEG that was actually sent to the providers, kept for transparency.</summary>
+    public string? ReverseQueryPath
+    {
+        get => _reverseQueryPath;
+        set => SetProperty(ref _reverseQueryPath, value);
+    }
+
+    public DateTimeOffset? ReverseSearchedAt
+    {
+        get => _reverseSearchedAt;
+        set => SetProperty(ref _reverseSearchedAt, value);
+    }
+
+    public bool IsReverseSearching
+    {
+        get => _isReverseSearching;
+        set
+        {
+            if (SetProperty(ref _isReverseSearching, value))
+            {
+                OnPropertyChanged(nameof(ReverseResultsHeader), nameof(ReverseResultsTone), nameof(ShowReverseStatus), nameof(ShowReverseStatusChip));
+            }
+        }
+    }
+
+    public bool HasReverseResults => ReverseResults.Count > 0;
+
+    /// <summary>Compact card chip for searches that finished without a usable match.</summary>
+    public bool ShowReverseStatusChip => !IsReverseSearching &&
+                                        !HasReverseResults &&
+                                        ReverseStatus is ReverseSearchStatus.NoMatch
+                                            or ReverseSearchStatus.NeedsBetterFrame
+                                            or ReverseSearchStatus.Error;
+
+    /// <summary>Hides the empty "no original yet" line until something meaningful happened.</summary>
+    public bool ShowReverseStatus => IsReverseSearching ||
+                                     ReverseResults.Count > 0 ||
+                                     ReverseStatus != ReverseSearchStatus.Idle;
+
+    /// <summary>True when a source was identified but it is not a larger image.</summary>
+    public bool HasReverseMatches => HasReverseResults && !HasBetterOriginal;
+
+    public bool HasBetterOriginal => ReverseResults.Any(result => result.IsBetterThanCurrent);
+
+    public ReverseSearchResult? BestOriginal => ReverseResults.FirstOrDefault(result => result.IsBetterThanCurrent)
+                                                ?? ReverseResults.FirstOrDefault();
+
+    /// <summary>Short badge text for the library card.</summary>
+    public string OriginalChipText => HasBetterOriginal && BestOriginal is not null
+        ? "Original " + BestOriginal.ResolutionText
+        : "Source found";
+
+    public string ReverseResultsHeader => IsReverseSearching
+        ? "Searching for the original"
+        : ReverseResults.Count > 0
+            ? $"{ReverseResults.Count} match{(ReverseResults.Count == 1 ? string.Empty : "es")} found"
+            : ReverseStatus switch
+            {
+                ReverseSearchStatus.NoMatch => "No match found",
+                ReverseSearchStatus.NeedsBetterFrame => "Frame too blank to match",
+                ReverseSearchStatus.NotConfigured => "Reverse search not configured",
+                ReverseSearchStatus.Skipped => "Reverse search paused",
+                ReverseSearchStatus.Error => "Reverse search failed",
+                _ => "No original found yet"
+            };
+
+    public string ReverseResultsTone => IsReverseSearching
+        ? "accent"
+        : ReverseResults.Count > 0
+            ? (HasBetterOriginal ? "success" : "neutral")
+            : ReverseStatus switch
+            {
+                ReverseSearchStatus.NoMatch => "warning",
+                ReverseSearchStatus.NeedsBetterFrame => "warning",
+                ReverseSearchStatus.Error => "danger",
+                ReverseSearchStatus.NotConfigured => "muted",
+                ReverseSearchStatus.Skipped => "muted",
+                _ => "neutral"
+            };
+
+    public string ReverseStatusLabel => ReverseStatus switch
+    {
+        ReverseSearchStatus.Searching => "Searching",
+        ReverseSearchStatus.Results => "Matches found",
+        ReverseSearchStatus.NoMatch => "No match",
+        ReverseSearchStatus.NotConfigured => "Not configured",
+        ReverseSearchStatus.NeedsBetterFrame => "Needs a better frame",
+        ReverseSearchStatus.Skipped => "Paused",
+        ReverseSearchStatus.Error => "Error",
+        _ => "Not searched"
+    };
+
+    public string ReverseStatusTone => ReverseStatus switch
+    {
+        ReverseSearchStatus.Results => "success",
+        ReverseSearchStatus.NoMatch => "warning",
+        ReverseSearchStatus.NeedsBetterFrame => "warning",
+        ReverseSearchStatus.Error => "danger",
+        ReverseSearchStatus.NotConfigured => "muted",
+        ReverseSearchStatus.Skipped => "muted",
+        _ => "neutral"
+    };
+
+    public string ReverseSearchedText => ReverseSearchedAt is null
+        ? string.Empty
+        : "last search " + ReverseSearchedAt.Value.LocalDateTime.ToString("g");
 
     public Guid Id { get; } = Guid.NewGuid();
 
@@ -323,12 +498,46 @@ public sealed class WallpaperSource : ObservableObject
         Resolution = new ResolutionInfo(width, height);
     }
 
+    /// <summary>Replaces the match list from a completed (or cached) search.</summary>
+    public void ApplyReverseSearch(ReverseSearchSnapshot? snapshot)
+    {
+        ReverseResults.Clear();
+        if (snapshot is null)
+        {
+            ReverseStatus = ReverseSearchStatus.Idle;
+            ReverseNote = null;
+            return;
+        }
+
+        foreach (var result in snapshot.Results)
+        {
+            ReverseResults.Add(result);
+        }
+
+        ReverseStatus = snapshot.Status;
+        ReverseNote = snapshot.Note;
+        ReverseQueryPath = snapshot.QueryImagePath;
+        ReverseSearchedAt = snapshot.SearchedAt;
+    }
+
+    public void ResetReverseSearch()
+    {
+        ReverseResults.Clear();
+        ReverseStatus = ReverseSearchStatus.Idle;
+        ReverseNote = null;
+        ReverseQueryPath = null;
+        ReverseSearchedAt = null;
+        IsReverseSearching = false;
+    }
+
     public void ResetForRescan()
     {
         CandidateFramePath = null;
         Thumbnail = null;
         ErrorMessage = null;
         ExportStatus = ExportStatus.NotExported;
+        CandidateNote = null;
+        ResetReverseSearch();
     }
 
     private void NotifyStatusComputed()

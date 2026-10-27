@@ -205,9 +205,11 @@
                                         <Button Style="{StaticResource SmallButton}" Content="Toss" Margin="0,0,4,0"
                                                 Command="{Binding DataContext.TossItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}" />
-                                        <Button Style="{StaticResource IconButton}" Content="&#xE74D;" ToolTip="Remove from queue"
+                                        <Button Style="{StaticResource IconButton}" ToolTip="Remove from queue"
                                                 Command="{Binding DataContext.RemoveItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                                CommandParameter="{Binding}" />
+                                                CommandParameter="{Binding}">
+                                            <TextBlock Text="&#xE74D;" FontFamily="{StaticResource Font.Icon}" FontSize="12" />
+                                        </Button>
                                     </StackPanel>
                                 </Grid>
                             </Border>

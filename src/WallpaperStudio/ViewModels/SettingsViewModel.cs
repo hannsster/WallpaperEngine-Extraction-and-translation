@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Windows.Input;
+using WallpaperStudio.Services.ReverseSearch;
 
 namespace WallpaperStudio.ViewModels;
 
@@ -14,6 +15,7 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly WallpaperEngineLocator _wallpaperEngine;
     private readonly SteamCmdService _steamCmd;
     private readonly StateStore _state;
+    private readonly ReverseSearchService _reverse;
     private readonly DialogService _dialogs;
     private readonly ShellState _shell;
 
@@ -32,6 +34,7 @@ public sealed class SettingsViewModel : ObservableObject
         WallpaperEngineLocator wallpaperEngine,
         SteamCmdService steamCmd,
         StateStore state,
+        ReverseSearchService reverse,
         DialogService dialogs,
         ShellState shell)
     {
@@ -40,6 +43,7 @@ public sealed class SettingsViewModel : ObservableObject
         _wallpaperEngine = wallpaperEngine;
         _steamCmd = steamCmd;
         _state = state;
+        _reverse = reverse;
         _dialogs = dialogs;
         _shell = shell;
 
@@ -216,6 +220,186 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    // ------------------------------------------------------------------ reverse search
+
+    public bool ReverseSearchEnabled
+    {
+        get => Settings.ReverseSearchEnabled;
+        set
+        {
+            if (Settings.ReverseSearchEnabled == value)
+            {
+                return;
+            }
+
+            if (value && !Settings.ReverseSearchConsent)
+            {
+                if (!ConfirmReverseSearch())
+                {
+                    OnPropertyChanged();
+                    return;
+                }
+
+                Settings.ReverseSearchConsent = true;
+            }
+
+            Settings.ReverseSearchEnabled = value;
+            OnPropertyChanged();
+            RefreshReverseState();
+        }
+    }
+
+    public bool ReverseSearchAutomatic
+    {
+        get => Settings.ReverseSearchAutomatic;
+        set
+        {
+            if (Settings.ReverseSearchAutomatic != value)
+            {
+                Settings.ReverseSearchAutomatic = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public bool ReverseSearchTraceMoe
+    {
+        get => Settings.ReverseSearchTraceMoe;
+        set
+        {
+            if (Settings.ReverseSearchTraceMoe != value)
+            {
+                Settings.ReverseSearchTraceMoe = value;
+                OnPropertyChanged();
+                RefreshReverseState();
+            }
+        }
+    }
+
+    public bool ReverseSearchEnrichBooru
+    {
+        get => Settings.ReverseSearchEnrichBooru;
+        set
+        {
+            if (Settings.ReverseSearchEnrichBooru != value)
+            {
+                Settings.ReverseSearchEnrichBooru = value;
+                OnPropertyChanged();
+            }
+        }
+    }
+
+    public string SauceNaoApiKey
+    {
+        get => Settings.SauceNaoApiKey;
+        set
+        {
+            if (!string.Equals(Settings.SauceNaoApiKey, value, StringComparison.Ordinal))
+            {
+                Settings.SauceNaoApiKey = value ?? string.Empty;
+                OnPropertyChanged();
+                RefreshReverseState();
+            }
+        }
+    }
+
+    public string GoogleVisionApiKey
+    {
+        get => Settings.GoogleVisionApiKey;
+        set
+        {
+            if (!string.Equals(Settings.GoogleVisionApiKey, value, StringComparison.Ordinal))
+            {
+                Settings.GoogleVisionApiKey = value ?? string.Empty;
+                OnPropertyChanged();
+                RefreshReverseState();
+            }
+        }
+    }
+
+    public int ReverseSearchDailyLimit
+    {
+        get => Settings.ReverseSearchDailyLimit;
+        set
+        {
+            var clamped = Math.Clamp(value, 1, 500);
+            if (Settings.ReverseSearchDailyLimit != clamped)
+            {
+                Settings.ReverseSearchDailyLimit = clamped;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ReverseSearchBudgetText));
+            }
+        }
+    }
+
+    public double ReverseSearchMinSimilarity
+    {
+        get => Settings.ReverseSearchMinSimilarity;
+        set
+        {
+            var clamped = Math.Clamp(Math.Round(value, 2), 0.50, 0.99);
+            if (Math.Abs(Settings.ReverseSearchMinSimilarity - clamped) > 0.001)
+            {
+                Settings.ReverseSearchMinSimilarity = clamped;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ReverseSearchConfidenceText));
+            }
+        }
+    }
+
+    public string ReverseSearchConfidenceText => $"{Settings.ReverseSearchMinSimilarity:P0} minimum match confidence";
+
+    public string ReverseSearchBudgetText =>
+        $"{_reverse.AutomaticSearchesToday} of {Settings.ReverseSearchDailyLimit} automatic searches used today";
+
+    public bool HasReverseSearchConsent => Settings.ReverseSearchConsent;
+
+    public string ReverseSearchStatusText
+    {
+        get
+        {
+            if (!Settings.ReverseSearchEnabled)
+            {
+                return "Off - nothing is uploaded";
+            }
+
+            var providers = _reverse.ActiveProviders;
+            return providers.Count > 0
+                ? "Ready - " + string.Join(" + ", providers)
+                : "On, but no provider has a key yet";
+        }
+    }
+
+    public string ReverseSearchTone
+    {
+        get
+        {
+            if (!Settings.ReverseSearchEnabled)
+            {
+                return "muted";
+            }
+
+            return _reverse.ActiveProviders.Count > 0 ? "success" : "warning";
+        }
+    }
+
+    private bool ConfirmReverseSearch()
+    {
+        return _dialogs.Confirm("Turn on reverse image search?",
+            "Wallpaper Studio uploads a 1280-pixel JPEG copy of an extracted frame to the providers you enable, so they can find the original artwork.\n\n" +
+            "• SauceNAO - Pixiv and booru originals (needs a free API key)\n" +
+            "• trace.moe - anime scene identification (keyless)\n" +
+            "• Google Vision - pages with the same or similar image (needs a key)\n\n" +
+            "Provider keys are stored in settings.json on this PC. No full-size image is downloaded unless you pick a result, and nothing is ever published.");
+    }
+
+    private void RefreshReverseState()
+    {
+        OnPropertyChanged(
+            nameof(ReverseSearchStatusText), nameof(ReverseSearchTone), nameof(HasReverseSearchConsent),
+            nameof(ReverseSearchBudgetText), nameof(ReverseSearchConfidenceText));
+    }
+
     public bool SkipAlreadyExported
     {
         get => Settings.SkipAlreadyExported;
@@ -334,7 +518,11 @@ public sealed class SettingsViewModel : ObservableObject
             nameof(EnforceMinimumResolution), nameof(DefaultFrameTimestampSeconds), nameof(DefaultFrameTimestampText),
             nameof(FfmpegPath), nameof(WallpaperEnginePath), nameof(SteamCmdPath), nameof(SteamUsername), nameof(SkipAlreadyExported),
             nameof(OpenExportFolderAfterBatch), nameof(AutoApproveScenes), nameof(DataDirectory), nameof(SettingsFile), nameof(StateFile),
-            nameof(PortableModeText), nameof(PortableTone), nameof(StateRecordCount));
+            nameof(PortableModeText), nameof(PortableTone), nameof(StateRecordCount),
+            nameof(ReverseSearchEnabled), nameof(ReverseSearchAutomatic), nameof(ReverseSearchTraceMoe),
+            nameof(ReverseSearchEnrichBooru), nameof(SauceNaoApiKey), nameof(GoogleVisionApiKey),
+            nameof(ReverseSearchDailyLimit), nameof(ReverseSearchMinSimilarity), nameof(ReverseSearchConfidenceText),
+            nameof(ReverseSearchBudgetText), nameof(ReverseSearchStatusText), nameof(ReverseSearchTone), nameof(HasReverseSearchConsent));
         RefreshToolchain();
     }
 
@@ -504,6 +692,7 @@ public sealed class SettingsViewModel : ObservableObject
             Settings.Normalize();
             _settingsService.Save();
             RefreshToolchain();
+            RefreshReverseState();
             SaveMessageIsError = false;
             SaveMessage = "Settings saved to " + AppPaths.SettingsFile;
             _shell.ReportText("Settings saved.");
@@ -536,6 +725,15 @@ public sealed class SettingsViewModel : ObservableObject
         Settings.SkipAlreadyExported = true;
         Settings.OpenExportFolderAfterBatch = false;
         Settings.AutoApproveScenes = true;
+        Settings.ReverseSearchEnabled = false;
+        Settings.ReverseSearchConsent = false;
+        Settings.ReverseSearchAutomatic = true;
+        Settings.ReverseSearchTraceMoe = true;
+        Settings.ReverseSearchEnrichBooru = true;
+        Settings.SauceNaoApiKey = string.Empty;
+        Settings.GoogleVisionApiKey = string.Empty;
+        Settings.ReverseSearchDailyLimit = 40;
+        Settings.ReverseSearchMinSimilarity = 0.80;
         Settings.SourceFolder = source;
 
         try

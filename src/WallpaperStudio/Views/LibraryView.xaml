@@ -58,8 +58,10 @@
                            Foreground="{StaticResource Brush.Warning}" VerticalAlignment="Top" Margin="0,1,0,0" />
                 <TextBlock Grid.Column="1" Text="{Binding DataContext.StartupNotice, RelativeSource={RelativeSource AncestorType=Window}}" Margin="11,0,12,0"
                            TextWrapping="Wrap" FontSize="12.5" Foreground="#F6E3BF" />
-                <Button Grid.Column="2" Style="{StaticResource IconButton}" Content="&#xE711;"
-                        ToolTip="Dismiss" Command="{Binding DataContext.DismissStartupNoticeCommand, RelativeSource={RelativeSource AncestorType=Window}}" />
+                <Button Grid.Column="2" Style="{StaticResource IconButton}"
+                        ToolTip="Dismiss" Command="{Binding DataContext.DismissStartupNoticeCommand, RelativeSource={RelativeSource AncestorType=Window}}">
+                    <TextBlock Text="&#xE711;" FontFamily="{StaticResource Font.Icon}" FontSize="12" />
+                </Button>
             </Grid>
         </Border>
 
@@ -274,6 +276,31 @@
                                             <TextBlock Text="JPEG ready" Style="{StaticResource ChipText}"
                                                        Foreground="{StaticResource Brush.Success}" />
                                         </Border>
+                                        <Border Style="{StaticResource Chip}" Margin="0,0,6,4"
+                                                Background="#1F6C9BFF" BorderBrush="#406C9BFF"
+                                                Visibility="{Binding IsReverseSearching, Converter={StaticResource BoolToVisibility}}">
+                                            <TextBlock Text="Finding original" Style="{StaticResource ChipText}"
+                                                       Foreground="{StaticResource Brush.Accent}" />
+                                        </Border>
+                                        <Border Style="{StaticResource Chip}" Margin="0,0,6,4"
+                                                Background="#1F63D6A6" BorderBrush="#4063D6A6"
+                                                ToolTip="A larger copy of this artwork was found by reverse image search."
+                                                Visibility="{Binding HasBetterOriginal, Converter={StaticResource BoolToVisibility}}">
+                                            <TextBlock Text="{Binding OriginalChipText}" Style="{StaticResource ChipText}"
+                                                       Foreground="{StaticResource Brush.Success}" />
+                                        </Border>
+                                        <Border Style="{StaticResource Chip}" Margin="0,0,6,4"
+                                                ToolTip="The source of this artwork was identified, but no larger copy was found."
+                                                Visibility="{Binding HasReverseMatches, Converter={StaticResource BoolToVisibility}}">
+                                            <TextBlock Text="Source found" Style="{StaticResource ChipText}" />
+                                        </Border>
+                                        <Border Style="{StaticResource Chip}" Margin="0,0,6,4"
+                                                Background="{Binding ReverseResultsTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                                                BorderBrush="{Binding ReverseResultsTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}"
+                                                Visibility="{Binding ShowReverseStatusChip, Converter={StaticResource BoolToVisibility}}">
+                                            <TextBlock Text="{Binding ReverseResultsHeader}" Style="{StaticResource ChipText}"
+                                                       Foreground="{Binding ReverseResultsTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}" />
+                                        </Border>
                                     </WrapPanel>
 
                                     <TextBlock Text="{Binding ErrorMessage}" Style="{StaticResource Caption}" Margin="2,2,2,0"
@@ -286,6 +313,7 @@
                                             <ColumnDefinition Width="Auto" />
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <Button Style="{StaticResource SmallButton}" Content="Review frame"
                                                 Margin="0,0,6,0"
@@ -297,7 +325,14 @@
                                                 Command="{Binding DataContext.ExportItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"
                                                 IsEnabled="{Binding CanExportNow}" />
-                                        <Button Grid.Column="2" Style="{StaticResource GhostButton}" Content="Open"
+                                        <Button Grid.Column="2" Style="{StaticResource IconButton}"
+                                                Margin="4,0,0,0" ToolTip="Look for the original artwork"
+                                                Visibility="{Binding RequiresApproval, Converter={StaticResource InverseBoolToVisibility}}"
+                                                Command="{Binding DataContext.FindOriginalCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                CommandParameter="{Binding}">
+                                            <TextBlock Text="&#xE721;" FontFamily="{StaticResource Font.Icon}" FontSize="13" />
+                                        </Button>
+                                        <Button Grid.Column="3" Style="{StaticResource GhostButton}" Content="Open"
                                                 FontSize="11.5" Padding="6,7"
                                                 Command="{Binding DataContext.OpenExportedFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"

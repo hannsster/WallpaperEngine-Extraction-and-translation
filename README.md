@@ -2,7 +2,9 @@
 
 A portable Windows desktop tool for turning locally installed **Wallpaper Engine** wallpapers into static high-quality JPEGs, preparing images for a **manual** personal-use import back into Wallpaper Engine, and — if you ask it to — uploading wallpapers you own to the **Steam Workshop** through Valve's SteamCMD, **private by default**.
 
-> Personal use only. Wallpaper Studio does not bypass DRM or protected formats and does not call undocumented Steam/Wallpaper Engine APIs. Workshop publishing is opt-in, uses Valve's documented `steamcmd +workshop_build_item`, uploads as **Private** by default, stores **no** Steam credentials, and reports success only when SteamCMD writes a real Workshop id back.
+It can also look up the **original artwork** behind an extracted frame with reverse image search, so you can see the artist or source and, only if you confirm, replace a low-resolution candidate with a higher-resolution copy.
+
+> Personal use only. Wallpaper Studio does not bypass DRM or protected formats and does not call undocumented Steam/Wallpaper Engine APIs. Workshop publishing is opt-in, uses Valve's documented `steamcmd +workshop_build_item`, uploads as **Private** by default, stores **no** Steam credentials, and reports success only when SteamCMD writes a real Workshop id back. Reverse image search is **off by default**, uploads only a 1280-pixel copy of the frame, and never downloads or replaces anything without your explicit confirmation.
 
 ![Wallpaper Studio](src/WallpaperStudio/Assets/app-icon.png)
 
@@ -28,6 +30,13 @@ Grab the latest portable build from the [**Releases**](../../releases) page:
 - Extracts a **full-resolution static image from scene packages**: it follows the package's own `scene.json` → model → material → texture chain and decodes the referenced textures in-process (embedded JPEG/PNG, or raw/BC1/BC2/BC3/RGBA GPU data, including LZ4-compressed mips). A plain, validated JPEG/PNG preview inside the package is used as a clearly-labelled fallback only when extraction is not possible.
 - Auto-approves clean sources for export: images, and scenes whose real image resolves to at least 1080p. An explicit review/approval step is required before exporting a **video**, a **sub-1080p scene**, or a scene frame that comes out **nearly all black**.
 - Provides an import queue with a 1080p gate and a manual staging workflow.
+- Finds the **original artwork** behind an extracted frame with optional reverse image search:
+  - uploads a cleaned, **1280-pixel** JPEG copy of the frame to the providers you enable;
+  - **trace.moe** identifies anime scenes (no key needed), **SauceNAO** finds Pixiv/booru originals, and **Google Vision** (Web Detection) covers the rest;
+  - shows result cards with a real resolution and a match score, highlights copies that are **larger** than the current candidate, and only downloads a full image after you confirm it — the download becomes a **pending** candidate, never an automatic replacement;
+  - searches automatically after extraction (with a daily budget) or on demand with **Search again**;
+  - caches results and thumbnails locally so badges survive a restart and repeated searches cost no quota.
+- Offers 12 sampled frames for videos (and blank-looking frames) so you can pick the clearest moment to search from.
 - Publishes wallpapers you choose to the Steam Workshop through Valve's SteamCMD:
   - uploads existing `project.json` project folders as-is, updating the item when the manifest already has a `workshopid`;
   - builds new **video** wallpapers from loose videos;
@@ -47,6 +56,10 @@ Grab the latest portable build from the [**Releases**](../../releases) page:
   - Download it from Valve, place `steamcmd.exe` in a `steamcmd` folder next to the app, add it to `PATH`, or choose it in Settings.
   - Sign in once inside Valve's own SteamCMD window. Wallpaper Studio never sees or stores your password or Steam Guard code.
   - SteamCMD and Steam are Valve's tools, distributed by Valve under Valve's terms; they are not bundled or downloaded by this app.
+- Reverse image search **optional** and **off by default**
+  - **trace.moe** needs no key. **SauceNAO** and **Google Vision** need a free API key of your own, pasted into Settings.
+  - Keys are stored as plain text in `settings.json` on your PC. Free tiers are roughly 150 searches/month for SauceNAO and 1,000/month for the Vision Web Detection feature.
+  - The app uploads only the extracted frame, downscaled to a 1280-pixel JPEG. No filenames, paths, library contents or account details are sent.
 
 ## Build
 
@@ -81,18 +94,33 @@ The publish folder contains `WallpaperStudio.exe`. Keep `WallpaperStudioData/` a
    - `...\Steam\steamapps\common\wallpaper_engine\projects\myprojects`
    - any folder containing isolated videos/images/projects
 2. Select **Scan library**. Detection is read-only.
-3. For images, press **Export JPEG**.
+3. For images, press **Export JPEG**. The magnifier button on the card opens the same frame review without an approval step, which is where reverse search results appear.
 4. For videos and scenes, press **Review frame**:
    - videos use FFmpeg to render the chosen timestamp;
    - scenes are decoded to their **full resolution** from the package's own textures; use **Re-extract scene image** to refresh one;
    - if extraction is not possible, the project preview, a sibling `preview.*`, or a validated embedded preview is used and labelled as a fallback;
-   - scenes that resolve to at least 1080p are auto-approved by default (toggle **Auto-approve extracted scene frames** in Settings). Sub-1080p scenes, videos, all-black frames and low-resolution fallbacks still need **Approve this frame** before export.
+   - scenes that resolve to at least 1080p are auto-approved by default (toggle **Auto-approve extracted scene frames** in Settings). Sub-1080p scenes, videos, all-black frames and low-resolution fallbacks still need **Approve this frame** before export;
+   - **Sample frames** renders twelve timestamps when a video opens on a fade, logo or black screen, and preselects the clearest one.
 5. Use the **Import queue** to prepare images for Wallpaper Engine:
    - add images or a whole folder;
    - the 1080p rule requires a long edge of at least 1920 **and** a short edge of at least 1080;
    - low-resolution images must be explicitly approved or tossed;
    - **Stage approved** copies files to a normal folder and writes an instructions file.
 6. Import the staged files manually in Wallpaper Engine. The app can optionally launch Wallpaper Engine for you, but it does not automate the import.
+
+### Find the original artwork (optional, off by default)
+
+1. Turn on **Enable reverse image search** in Settings and confirm the one-time consent prompt. Both the automatic and the manual search wait for that consent.
+2. Enable at least one provider: **trace.moe** works without a key; add a **SauceNAO** and/or **Google Vision** key for general artwork.
+3. Open **Frame review** for a video or scene, or use the magnifier button on an image card. A search runs automatically after the candidate frame is ready; **Search again** repeats it on demand.
+4. Read the result cards:
+   - **IDENTIFICATION** means the source was named (anime, episode, timestamp) but no image can be downloaded — trace.moe never returns the picture itself;
+   - **HIGHER RES** marks a copy that is genuinely bigger than your current frame;
+   - the confidence score and the real pixel size come from the provider plus a small enrichment pass against public booru APIs.
+5. **Use image** downloads that one result. It must decode, pass the 1080p rule, and not be all black; otherwise it is rejected with an explanation. The download becomes a **pending** candidate — approve it explicitly in Frame review.
+6. Use **Sample frames** when the opening second is a logo, fade or black screen. Twelve frames are rendered, the clearest one is preselected, and clicking a frame re-extracts at that timestamp and searches again.
+
+Automatic searches are capped by **Automatic searches per day** (default 40) so a large library cannot burn through free quotas. Manual searches are never blocked, and cached results are never counted twice.
 
 ### Publish to the Steam Workshop (optional)
 
@@ -129,6 +157,7 @@ When the executable directory is writable:
   logs\
   cache\thumbs\
   cache\frames\
+  cache\reverse\                  query JPEGs, result JSON, provider thumbnails, daily usage
   publish\                       built project folders + Workshop .vdf scripts
 <app>\Exports\
 ```
@@ -146,6 +175,9 @@ Otherwise the same structure is created under `%LOCALAPPDATA%\WallpaperStudio`. 
 - **No faked successes.** An item is marked Published only when SteamCMD writes a new, non-zero `publishedfileid` back into its script; SteamCMD's own output and any errors are shown verbatim.
 - **Image → scene generation is experimental.** It writes a minimal, unencrypted scene using a texture container reconstructed from a public open-source reader, not an official specification. Open the built folder in Wallpaper Engine and confirm it renders before sharing.
 - **Composition is approximate.** A scene is flattened by stacking its full-frame image layers bottom-to-top on black. The scene is shown at the resolution its own projection declares (for example 3840×2160), not the thumbnail size.
+- **Reverse image search is opt-in and bounded.** It stays off until you enable it and confirm the consent prompt. Only a 1280-pixel JPEG of the extracted frame is uploaded, and only to the providers you enable. Nothing is downloaded or published automatically: a downloaded original always lands as a **pending** candidate that you approve yourself.
+- **Results can be wrong or incomplete.** trace.moe only identifies anime scenes and cannot return the artwork; SauceNAO and Google Vision depend on their own indexes and free quotas. A high score is a lead, not proof of authorship. Check the source before reusing anything.
+- **API keys are stored in plain text** in `settings.json` beside the app. Use free, revocable keys and clear them if you share the folder.
 - Video frames depend on the installed FFmpeg build and its codec support.
 - Wallpaper Engine import remains a manual workflow because the application exposes no documented CLI/import API. Uploading is likewise left to Valve's SteamCMD rather than any invented API.
 - Respect creators' rights. Do not redistribute or publish content you do not own or license.
@@ -168,8 +200,18 @@ src/WallpaperStudio/
     TexDecoder.cs                Read-only TEXB texture header/decoder
     BlockTextureDecoder.cs       BC1/BC2/BC3/RGBA8/RG8/R8 → RGBA
     Lz4BlockDecoder.cs           LZ4 block decompression for texture mips
-    FrameAnalyzer.cs             All-black frame detection
-    FfmpegService.cs             Locate FFmpeg, probe media, extract frames
+    FrameAnalyzer.cs             All-black frame detection and frame quality scoring
+    FfmpegService.cs             Locate FFmpeg, probe media, extract frames and filmstrips
+    ReverseSearch\
+      ReverseSearchService.cs    Orchestrates providers, ranking, cache and downloads
+      ReverseImageProvider.cs    Provider contract and shared result model
+      SauceNaoProvider.cs        SauceNAO JSON API
+      TraceMoeProvider.cs        trace.moe scene identification
+      GoogleVisionProvider.cs    Cloud Vision Web Detection
+      BooruEnricher.cs           Danbooru/Yande.re/Konachan size + file URLs
+      ImageDimensionProbe.cs     HTTP Range size probe for unknown images
+      ReverseSearchCache.cs      Per-query JSON, thumbnails and daily usage
+      ReverseSearchHttp.cs       Shared HttpClient, retries and error mapping
     ImageService.cs              SkiaSharp probing and thumbnail cache
     SkiaImage.cs                 Decode, EXIF orientation, resize, JPEG encode
     ExportService.cs             Approved-frame JPEG export and state updates
@@ -191,5 +233,6 @@ src/WallpaperStudio/
 - **SkiaSharp** — MIT license. Used for image decode, orientation, resizing and JPEG encoding.
 - **FFmpeg** — separate project, typically LGPL/GPL depending on the build. Not bundled or downloaded by this app. If you redistribute FFmpeg, include its license and source offer.
 - **SteamCMD** — Valve's command-line Steam client. Distributed by Valve under Steam's terms; not bundled or downloaded by this app. Used only when you publish.
+- **Reverse image search providers** — traffic goes to [trace.moe](https://trace.moe), [SauceNAO](https://saucenao.com) and, if you add a key, Google Cloud Vision, each under its own terms and privacy policy. Optional size/URL enrichment uses the public Danbooru, Yande.re and Konachan JSON APIs. No key, image or result is shared with this project; all requests come from your own machine and your own quotas.
 
 Wallpaper Engine and Steam are trademarks of their respective owners. This project is not affiliated with or endorsed by them.
