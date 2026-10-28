@@ -1,0 +1,232 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="WallpaperStudio.Views.ImportView">
+
+  <Grid RowDefinitions="Auto,Auto,Auto,*">
+
+    <!-- ============================== Header ============================== -->
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+      <StackPanel>
+        <TextBlock Text="Import Queue" Classes="pageTitle" />
+        <TextBlock Text="Prepare images for a manual Wallpaper Engine import. Nothing is published or uploaded."
+                   Classes="pageSubtitle" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+        <Button Classes="secondary" Content="Add images…" Command="{Binding AddImagesCommand}" />
+        <Button Classes="secondary" Content="Add folder…" Command="{Binding AddFolderCommand}" />
+        <Button Classes="primary" Content="Stage approved" Command="{Binding StageCommand}" />
+      </StackPanel>
+    </Grid>
+
+    <!-- ======================= Rule + safety notes ======================== -->
+    <Grid Grid.Row="1" Margin="0,14,0,0" ColumnDefinitions="*,*">
+
+      <Border Classes="raisedCard" Padding="16,13" Margin="0,0,8,0">
+        <Grid ColumnDefinitions="Auto,*">
+          <Border Width="34" Height="34" CornerRadius="10" Background="{StaticResource Brush.AccentSoft}">
+            <mi:MaterialIcon Kind="Ruler" Width="15" Height="15"
+                             Foreground="{StaticResource Brush.Accent}"
+                             HorizontalAlignment="Center" />
+          </Border>
+          <StackPanel Grid.Column="1" Margin="11,0,0,0">
+            <TextBlock Text="Resolution gate" FontSize="13" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding RuleSummary}" Classes="caption" Margin="0,3,0,0" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="1" Classes="raisedCard" Padding="16,13" Margin="8,0,0,0">
+        <Grid ColumnDefinitions="Auto,*">
+          <Border Width="34" Height="34" CornerRadius="10" Background="#1F63D6A6">
+            <mi:MaterialIcon Kind="ShieldCheck" Width="15" Height="15"
+                             Foreground="{StaticResource Brush.Success}"
+                             HorizontalAlignment="Center" />
+          </Border>
+          <StackPanel Grid.Column="1" Margin="11,0,0,0">
+            <TextBlock Text="Manual, safe import" FontSize="13" FontWeight="SemiBold" />
+            <TextBlock Text="Wallpaper Engine has no documented CLI import. Staging copies files to a folder and writes instructions; publishing to the Workshop is opt-in and handled on the Publish screen through Valve's SteamCMD."
+                       Classes="caption" Margin="0,3,0,0" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- ==================== Queue stats + pending banner ================== -->
+    <Grid Grid.Row="2" Margin="0,14,0,10" ColumnDefinitions="Auto,*,Auto">
+
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <Border Classes="insetCard" Padding="13,8" Margin="0,0,8,0" MinWidth="96">
+          <StackPanel>
+            <TextBlock Text="{Binding TotalCount, StringFormat='{}{0:N0}'}" FontSize="18" FontWeight="SemiBold" />
+            <TextBlock Text="Queued" Classes="micro" />
+          </StackPanel>
+        </Border>
+        <Border Classes="insetCard" Padding="13,8" Margin="0,0,8,0" MinWidth="96">
+          <StackPanel>
+            <TextBlock Text="{Binding ApprovedCount, StringFormat='{}{0:N0}'}" FontSize="18" FontWeight="SemiBold"
+                       Foreground="{StaticResource Brush.Accent}" />
+            <TextBlock Text="Approved" Classes="micro" />
+          </StackPanel>
+        </Border>
+        <Border Classes="insetCard" Padding="13,8" Margin="0,0,8,0" MinWidth="96">
+          <StackPanel>
+            <TextBlock Text="{Binding PendingCount, StringFormat='{}{0:N0}'}" FontSize="18" FontWeight="SemiBold"
+                       Foreground="{StaticResource Brush.Warning}" />
+            <TextBlock Text="Needs decision" Classes="micro" />
+          </StackPanel>
+        </Border>
+        <Border Classes="insetCard" Padding="13,8" Margin="0,0,8,0" MinWidth="96">
+          <StackPanel>
+            <TextBlock Text="{Binding LowResolutionCount, StringFormat='{}{0:N0}'}" FontSize="18"
+                       FontWeight="SemiBold" Foreground="{StaticResource Brush.Warning}" />
+            <TextBlock Text="Below 1080p" Classes="micro" />
+          </StackPanel>
+        </Border>
+        <Border Classes="insetCard" Padding="13,8" MinWidth="96">
+          <StackPanel>
+            <TextBlock Text="{Binding TossedCount, StringFormat='{}{0:N0}'}" FontSize="18" FontWeight="SemiBold"
+                       Foreground="{StaticResource Brush.Danger}" />
+            <TextBlock Text="Tossed" Classes="micro" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <Border Grid.Column="1" Classes="insetCard" Padding="12,8" Margin="12,0"
+              Background="#1FF5C46B" BorderBrush="#4DF5C46B"
+              IsVisible="{Binding HasPendingDecisions}">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+          <mi:MaterialIcon Kind="Alert" Width="13" Height="13"
+                           Foreground="{StaticResource Brush.Warning}" />
+          <TextBlock Text="Some images are below 1080p. Staging will ask you to approve anyway or toss each one."
+                     FontSize="12" Foreground="#F4DFB8" Margin="8,0,0,0"
+                     VerticalAlignment="Center" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+        <Button Classes="ghost" Content="Clear queue" Command="{Binding ClearCommand}" />
+        <Button Classes="secondary" Content="Launch Wallpaper Engine"
+                Command="{Binding LaunchWallpaperEngineCommand}" />
+      </StackPanel>
+    </Grid>
+
+    <!-- ======================= Queue + staging result ===================== -->
+    <Grid Grid.Row="3" RowDefinitions="*,Auto">
+
+      <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl ItemsSource="{Binding Items}" Margin="0,0,8,0">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Classes="glassCard" Padding="11" Margin="0,0,0,10">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+
+                  <!-- Thumbnail -->
+                  <Border Width="92" Height="58" CornerRadius="9" Background="#0E141F">
+                    <Grid>
+                      <Border CornerRadius="9">
+                        <Border.Background>
+                          <ImageBrush Source="{Binding Thumbnail, Converter={StaticResource JpegImage}}"
+                                      Stretch="UniformToFill" />
+                        </Border.Background>
+                      </Border>
+                      <mi:MaterialIcon Kind="ImageOutline" Width="18" Height="18" Foreground="#33FFFFFF"
+                                       HorizontalAlignment="Center"
+                                       IsVisible="{Binding HasThumbnail, Converter={StaticResource InverseBool}}" />
+                    </Grid>
+                  </Border>
+
+                  <!-- Info -->
+                  <StackPanel Grid.Column="1" Margin="12,0,12,0" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding FileName}" Classes="cardTitle"
+                               TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding FileName}" />
+                    <TextBlock Text="{Binding FilePath}" Classes="monoPath" Margin="0,3,0,0" MaxWidth="520" />
+                    <TextBlock Text="{Binding RuleText}" Classes="micro" Margin="0,4,0,0"
+                               Foreground="{StaticResource Brush.Warning}"
+                               IsVisible="{Binding IsLowResolution}" />
+                    <TextBlock Text="{Binding Message}" Classes="micro" Margin="0,4,0,0"
+                               IsVisible="{Binding Message, Converter={StaticResource IsNull}, ConverterParameter=invert}" />
+                  </StackPanel>
+
+                  <!-- Resolution + status -->
+                  <StackPanel Grid.Column="2" VerticalAlignment="Center" MinWidth="128" Margin="0,0,14,0">
+                    <TextBlock Text="{Binding ResolutionText}" FontFamily="{StaticResource Font.Mono}"
+                               FontSize="12.5" Foreground="{StaticResource Brush.TextSecondary}"
+                               HorizontalAlignment="Right" />
+                    <TextBlock Text="{Binding FileSizeText}" Classes="micro"
+                               HorizontalAlignment="Right" Margin="0,3,0,6" />
+                    <Border Classes="chip" HorizontalAlignment="Right"
+                            Background="{Binding StatusTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                            BorderBrush="{Binding StatusTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+                      <TextBlock Text="{Binding StatusLabel}" Classes="chipText"
+                                 Foreground="{Binding StatusTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}" />
+                    </Border>
+                  </StackPanel>
+
+                  <!-- Actions -->
+                  <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center"
+                              IsVisible="{Binding IsStaged, Converter={StaticResource InverseBool}}">
+                    <Button Classes="small" Content="Approve" Margin="0,0,6,0"
+                            Command="{Binding $parent[UserControl].DataContext.ApproveItemCommand}"
+                            CommandParameter="{Binding}" />
+                    <Button Classes="small" Content="Toss" Margin="0,0,4,0"
+                            Command="{Binding $parent[UserControl].DataContext.TossItemCommand}"
+                            CommandParameter="{Binding}" />
+                    <Button Classes="icon" ToolTip.Tip="Remove from queue"
+                            Command="{Binding $parent[UserControl].DataContext.RemoveItemCommand}"
+                            CommandParameter="{Binding}">
+                      <mi:MaterialIcon Kind="Delete" Width="12" Height="12"
+                                       Foreground="{Binding $parent[Button].Foreground}" />
+                    </Button>
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <!-- Staging result -->
+      <Border Grid.Row="1" Classes="glassCard" Padding="16,13" Margin="0,6,8,0"
+              Background="#1F63D6A6" BorderBrush="#4D63D6A6"
+              IsVisible="{Binding HasStagingResult}">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <Border Width="34" Height="34" CornerRadius="10" Background="#3363D6A6">
+            <mi:MaterialIcon Kind="CheckBold" Width="15" Height="15"
+                             Foreground="{StaticResource Brush.Success}"
+                             HorizontalAlignment="Center" />
+          </Border>
+          <StackPanel Grid.Column="1" Margin="11,0,12,0" VerticalAlignment="Center">
+            <TextBlock Text="{Binding StagingSummary}" FontSize="13" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding StagingFolderDisplay}" Classes="monoPath" Margin="0,3,0,0" />
+          </StackPanel>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+            <Button Classes="small" Content="Open folder" Command="{Binding OpenStagingFolderCommand}" />
+            <Button Classes="small" Content="Instructions" Command="{Binding ShowInstructionsCommand}" />
+            <Button Classes="small" Content="Copy steps" Command="{Binding CopyInstructionsCommand}" />
+            <Button Classes="small" Content="How to import" Command="{Binding ManualInstructionsCommand}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- Empty state -->
+      <StackPanel Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480"
+                  IsVisible="{Binding IsEmpty}">
+        <Border Width="64" Height="64" CornerRadius="20" Background="{StaticResource Brush.AccentSoft}"
+                HorizontalAlignment="Center">
+          <mi:MaterialIcon Kind="PlaylistPlus" Width="26" Height="26"
+                           Foreground="{StaticResource Brush.Accent}"
+                           HorizontalAlignment="Center" />
+        </Border>
+        <TextBlock Text="Nothing queued for import" FontSize="18" FontWeight="SemiBold"
+                   HorizontalAlignment="Center" Margin="0,16,0,0" />
+        <TextBlock Text="Add single images or a whole folder. Images below the 1080p rule will ask for an explicit decision before staging."
+                   Classes="pageSubtitle" TextAlignment="Center" Margin="0,8,0,0" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,18,0,0" Spacing="8">
+          <Button Classes="primary" Content="Add images…" Command="{Binding AddImagesCommand}" />
+          <Button Classes="secondary" Content="Add folder…" Command="{Binding AddFolderCommand}" />
+        </StackPanel>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</UserControl>

@@ -1,0 +1,382 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="WallpaperStudio.Views.SettingsView">
+
+  <Grid RowDefinitions="Auto,*">
+
+    <!-- ============================== Header ============================== -->
+    <Grid Grid.Row="0" Margin="0,0,0,14" ColumnDefinitions="*,Auto">
+      <StackPanel>
+        <TextBlock Text="Settings" Classes="pageTitle" />
+        <TextBlock Text="Portable paths, export quality and safe tool discovery." Classes="pageSubtitle" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+        <Button Classes="ghost" Content="Reset defaults" Command="{Binding ResetCommand}" />
+        <Button Classes="primary" Content="Save settings" Command="{Binding SaveCommand}" />
+      </StackPanel>
+    </Grid>
+
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Margin="0,0,8,0">
+
+        <!-- Save message -->
+        <Border Classes="insetCard" Padding="12,9" Margin="0,0,0,12"
+                IsVisible="{Binding HasSaveMessage}">
+          <StackPanel Orientation="Horizontal">
+            <mi:MaterialIcon Kind="CheckBold" Width="13" Height="13"
+                             Foreground="{StaticResource Brush.Success}" />
+            <TextBlock Text="{Binding SaveMessage}" FontSize="12" Margin="8,0,0,0"
+                       Foreground="{StaticResource Brush.TextSecondary}" VerticalAlignment="Center"
+                       TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="*,*">
+
+          <!-- ========================= Left column ========================= -->
+          <StackPanel Margin="0,0,8,0">
+
+            <!-- Folders -->
+            <Border Classes="raisedCard" Padding="18,16" Margin="0,0,0,14">
+              <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                  <mi:MaterialIcon Kind="FolderOpen" Width="15" Height="15"
+                                   Foreground="{StaticResource Brush.Accent}" />
+                  <TextBlock Text="Folders" Classes="sectionTitle" Margin="9,0,0,0" />
+                </StackPanel>
+                <TextBlock Text="The source folder is scanned recursively. Exports never modify source files."
+                           Classes="caption" Margin="0,0,0,12" />
+
+                <TextBlock Text="SOURCE FOLDER" Classes="micro" />
+                <Grid Margin="0,6,0,0" ColumnDefinitions="*,Auto">
+                  <TextBox Text="{Binding SourceFolder, Mode=TwoWay}" />
+                  <Button Grid.Column="1" Classes="small" Content="Browse" Margin="6,0,0,0"
+                          Command="{Binding BrowseSourceCommand}" />
+                </Grid>
+
+                <TextBlock Text="EXPORT FOLDER" Classes="micro" Margin="0,12,0,0" />
+                <Grid Margin="0,6,0,0" ColumnDefinitions="*,Auto,Auto">
+                  <TextBox Text="{Binding ExportFolder, Mode=TwoWay}" />
+                  <Button Grid.Column="1" Classes="small" Content="Browse" Margin="6,0,0,0"
+                          Command="{Binding BrowseExportCommand}" />
+                  <Button Grid.Column="2" Classes="ghost" Content="Open" Padding="8,6" Margin="4,0,0,0"
+                          Command="{Binding OpenExportFolderCommand}" />
+                </Grid>
+              </StackPanel>
+            </Border>
+
+            <!-- Export quality -->
+            <Border Classes="raisedCard" Padding="18,16" Margin="0,0,0,14">
+              <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                  <mi:MaterialIcon Kind="ImageOutline" Width="15" Height="15"
+                                   Foreground="{StaticResource Brush.Accent}" />
+                  <TextBlock Text="Export &amp; resolution" Classes="sectionTitle" Margin="9,0,0,0" />
+                </StackPanel>
+                <TextBlock Text="JPEGs preserve the approved frame's aspect ratio and are never upscaled."
+                           Classes="caption" Margin="0,0,0,12" />
+
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="JPEG QUALITY" Classes="micro" />
+                  <TextBlock Grid.Column="1" Text="{Binding JpegQuality, StringFormat='{}{0}'}"
+                             Classes="micro" Foreground="{StaticResource Brush.Accent}" />
+                </Grid>
+                <Slider Minimum="40" Maximum="100" TickFrequency="1" IsSnapToTickEnabled="True"
+                        Value="{Binding JpegQuality, Mode=TwoWay}" />
+                <TextBlock Text="{Binding JpegQualityText}" Classes="micro" Margin="0,2,0,0" />
+
+                <Border Classes="divider" Margin="0,13,0,13" />
+
+                <CheckBox Classes="switch" Content="Enforce the 1080p import rule"
+                          IsChecked="{Binding EnforceMinimumResolution}" />
+                <TextBlock Text="Long edge ≥ 1920 and short edge ≥ 1080. Portrait 1080×1920 passes; 1080×1080 and 1280×720 fail. Low-resolution imports still require your explicit approve or toss."
+                           Classes="micro" Margin="53,5,0,0" />
+              </StackPanel>
+            </Border>
+
+            <!-- Video defaults -->
+            <Border Classes="raisedCard" Padding="18,16" Margin="0,0,0,14">
+              <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                  <mi:MaterialIcon Kind="MovieOpen" Width="15" Height="15"
+                                   Foreground="{StaticResource Brush.Accent}" />
+                  <TextBlock Text="Video defaults" Classes="sectionTitle" Margin="9,0,0,0" />
+                </StackPanel>
+                <TextBlock Text="Used as the starting point when a video is opened for review. The real extraction always waits for approval."
+                           Classes="caption" Margin="0,0,0,12" />
+
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="DEFAULT FRAME TIME" Classes="micro" />
+                  <TextBlock Grid.Column="1" Text="{Binding DefaultFrameTimestampText}" Classes="micro"
+                             Foreground="{StaticResource Brush.Accent}" />
+                </Grid>
+                <Slider Minimum="0" Maximum="60" TickFrequency="0.5" IsSnapToTickEnabled="True"
+                        Value="{Binding DefaultFrameTimestampSeconds, Mode=TwoWay}" />
+                <TextBlock Text="Try a later timestamp when the opening second is a logo or fade-in."
+                           Classes="micro" />
+              </StackPanel>
+            </Border>
+
+            <!-- Reverse image search -->
+            <Border Classes="raisedCard" Padding="18,16" Margin="0,0,0,14">
+              <StackPanel>
+                <Grid Margin="0,0,0,4" ColumnDefinitions="*,Auto">
+                  <StackPanel Orientation="Horizontal">
+                    <mi:MaterialIcon Kind="ImageSearch" Width="15" Height="15"
+                                     Foreground="{StaticResource Brush.Accent}" />
+                    <TextBlock Text="Reverse image search" Classes="sectionTitle" Margin="9,0,0,0" />
+                  </StackPanel>
+                  <Border Grid.Column="1" Classes="chip" VerticalAlignment="Center"
+                          Background="{Binding ReverseSearchTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                          BorderBrush="{Binding ReverseSearchTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+                    <TextBlock Text="{Binding ReverseSearchStatusText}" Classes="chipText"
+                               Foreground="{Binding ReverseSearchTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}"
+                               TextTrimming="CharacterEllipsis" MaxWidth="190" />
+                  </Border>
+                </Grid>
+                <TextBlock Text="Looks for the original artwork behind an extracted frame by uploading a 1280-pixel JPEG copy to the providers you enable. Off by default, and nothing is downloaded or published without your consent."
+                           Classes="caption" Margin="0,0,0,12" TextWrapping="Wrap" />
+
+                <CheckBox Classes="switch" Content="Enable reverse image search"
+                          IsChecked="{Binding ReverseSearchEnabled}" />
+                <TextBlock Text="Turning this on asks you to confirm the upload once. Turning it off stops all network traffic immediately."
+                           Classes="micro" Margin="53,5,0,12" TextWrapping="Wrap" />
+
+                <CheckBox Classes="switch" Content="Search automatically after extraction"
+                          IsChecked="{Binding ReverseSearchAutomatic}"
+                          IsEnabled="{Binding ReverseSearchEnabled}" />
+                <TextBlock Text="{Binding ReverseSearchBudgetText}" Classes="micro"
+                           Margin="53,5,0,12" TextWrapping="Wrap" />
+
+                <CheckBox Classes="switch" Content="Cap automatic searches per day"
+                          IsChecked="{Binding ReverseSearchLimitAutomatic}"
+                          IsEnabled="{Binding ReverseSearchEnabled}" />
+                <StackPanel Margin="53,5,0,12"
+                            IsVisible="{Binding ReverseSearchLimitAutomatic}">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock Text="AUTOMATIC SEARCHES PER DAY" Classes="micro" />
+                    <TextBlock Grid.Column="1" Text="{Binding ReverseSearchDailyLimit}" Classes="micro"
+                               Foreground="{StaticResource Brush.Accent}" />
+                  </Grid>
+                  <Slider Margin="0,6,0,0" Minimum="5" Maximum="500" TickFrequency="5"
+                          IsSnapToTickEnabled="True"
+                          Value="{Binding ReverseSearchDailyLimit, Mode=TwoWay}"
+                          IsEnabled="{Binding ReverseSearchEnabled}" />
+                  <TextBlock Text="Background searches only. Results already in the cache cost nothing, and pressing Search again on a wallpaper is never blocked. SauceNAO's free key is about 150 searches a month and Google's free Vision tier about 1,000, so a cap keeps a bulk import from using them up."
+                             Classes="micro" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <Border Classes="divider" Margin="0,2,0,13" />
+
+                <CheckBox Classes="switch" Content="IQDB (anime boorus, no key)"
+                          IsChecked="{Binding ReverseSearchIqdb}"
+                          IsEnabled="{Binding ReverseSearchEnabled}" />
+                <TextBlock Text="One upload is checked against Danbooru, Konachan, yande.re, Gelbooru, Sankaku, e-shuushuu, Zerochan and Anime-Pictures. Exact matches usually score 95-99%; looser lookalikes are hidden by the confidence floor. IQDB scans tens of millions of images, so it can take 20-45 seconds to answer; the other providers finish sooner but all results appear together."
+                           Classes="micro" Margin="53,5,0,12" TextWrapping="Wrap" />
+
+                <CheckBox Classes="switch" Content="trace.moe (anime scenes, no key)"
+                          IsChecked="{Binding ReverseSearchTraceMoe}"
+                          IsEnabled="{Binding ReverseSearchEnabled}" />
+                <TextBlock Text="Identifies the anime, episode and timestamp of a frame. It only identifies the source; it cannot return a larger image."
+                           Classes="micro" Margin="53,5,0,12" TextWrapping="Wrap" />
+
+                <TextBlock Text="SAUCENAO API KEY" Classes="micro" />
+                <TextBox Margin="0,6,0,0"
+                         Text="{Binding SauceNaoApiKey, Mode=TwoWay}"
+                         ToolTip.Tip="Free API key from saucenao.com" />
+                <TextBlock Text="Free key from saucenao.com. SauceNAO finds Pixiv and booru originals, which is where most Wallpaper Engine art comes from."
+                           Classes="micro" Margin="0,6,0,0" TextWrapping="Wrap" />
+
+                <TextBlock Text="GOOGLE VISION API KEY" Classes="micro" Margin="0,12,0,0" />
+                <TextBox Margin="0,6,0,0"
+                         Text="{Binding GoogleVisionApiKey, Mode=TwoWay}"
+                         ToolTip.Tip="Google Cloud Vision API key with Web Detection enabled" />
+                <TextBlock Text="Optional. Covers general artwork that SauceNAO cannot index. The Web Detection free tier is about 1,000 searches per month."
+                           Classes="micro" Margin="0,6,0,0" TextWrapping="Wrap" />
+
+                <Border Classes="divider" Margin="0,13,0,13" />
+
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="MINIMUM MATCH CONFIDENCE" Classes="micro" />
+                  <TextBlock Grid.Column="1" Text="{Binding ReverseSearchConfidenceText}" Classes="micro"
+                             Foreground="{StaticResource Brush.Accent}" />
+                </Grid>
+                <Slider Margin="0,8,0,0" Minimum="0.5" Maximum="0.99" TickFrequency="0.01"
+                        IsSnapToTickEnabled="True"
+                        Value="{Binding ReverseSearchMinSimilarity, Mode=TwoWay}" />
+                <TextBlock Text="Matches below this score are hidden so a weak guess never looks like a real original."
+                           Classes="micro" TextWrapping="Wrap" />
+
+                <TextBlock Text="API keys are stored as plain text in settings.json on this PC. Uploads go only to the services listed above; results and thumbnails are cached under the portable cache folder and can be cleared with it."
+                           Classes="micro" Margin="0,11,0,0" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+
+          <!-- ========================= Right column ======================== -->
+          <StackPanel Grid.Column="1" Margin="8,0,0,0">
+
+            <!-- Tooling -->
+            <Border Classes="raisedCard" Padding="18,16" Margin="0,0,0,14">
+              <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                  <mi:MaterialIcon Kind="Wrench" Width="15" Height="15"
+                                   Foreground="{StaticResource Brush.Accent}" />
+                  <TextBlock Text="Tool discovery" Classes="sectionTitle" Margin="9,0,0,0" />
+                </StackPanel>
+                <TextBlock Text="Both tools are optional. No Steam credentials are read or stored."
+                           Classes="caption" Margin="0,0,0,12" />
+
+                <TextBlock Text="FFMPEG (FOLDER OR EXE)" Classes="micro" />
+                <Grid Margin="0,6,0,0" ColumnDefinitions="*,Auto">
+                  <TextBox Text="{Binding FfmpegPath, Mode=TwoWay}" />
+                  <Button Grid.Column="1" Classes="small" Content="Browse" Margin="6,0,0,0"
+                          Command="{Binding BrowseFfmpegCommand}" />
+                </Grid>
+                <Grid Margin="0,7,0,0" ColumnDefinitions="*,Auto">
+                  <Border Classes="chip" HorizontalAlignment="Left"
+                          Background="{Binding FfmpegTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                          BorderBrush="{Binding FfmpegTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+                    <TextBlock Text="{Binding FfmpegStatus}" Classes="chipText"
+                               Foreground="{Binding FfmpegTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}"
+                               TextTrimming="CharacterEllipsis" MaxWidth="300" />
+                  </Border>
+                  <Button Grid.Column="1" Classes="small" Content="Detect"
+                          Command="{Binding DetectFfmpegCommand}" />
+                </Grid>
+
+                <Border Classes="divider" Margin="0,13,0,13" />
+
+                <TextBlock Text="WALLPAPER ENGINE" Classes="micro" />
+                <Grid Margin="0,6,0,0" ColumnDefinitions="*,Auto">
+                  <TextBox Text="{Binding WallpaperEnginePath, Mode=TwoWay}" />
+                  <Button Grid.Column="1" Classes="small" Content="Browse" Margin="6,0,0,0"
+                          Command="{Binding BrowseWallpaperEngineCommand}" />
+                </Grid>
+                <Grid Margin="0,7,0,0" ColumnDefinitions="*,Auto">
+                  <Border Classes="chip" HorizontalAlignment="Left"
+                          Background="{Binding WallpaperEngineTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                          BorderBrush="{Binding WallpaperEngineTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+                    <TextBlock Text="{Binding WallpaperEngineStatus}" Classes="chipText"
+                               Foreground="{Binding WallpaperEngineTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}"
+                               TextTrimming="CharacterEllipsis" MaxWidth="300" />
+                  </Border>
+                  <Button Grid.Column="1" Classes="small" Content="Detect"
+                          Command="{Binding DetectWallpaperEngineCommand}" />
+                </Grid>
+
+                <TextBlock Text="FFmpeg is licensed separately (typically LGPL/GPL depending on the build). If you redistribute it, include its license and source offer. Wallpaper Studio never bundles or downloads it."
+                           Classes="micro" Margin="0,11,0,0" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <!-- Workshop publishing -->
+            <Border Classes="raisedCard" Padding="18,16" Margin="0,0,0,14">
+              <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                  <mi:MaterialIcon Kind="CloudUpload" Width="15" Height="15"
+                                   Foreground="{StaticResource Brush.Accent}" />
+                  <TextBlock Text="Workshop publishing" Classes="sectionTitle" Margin="9,0,0,0" />
+                </StackPanel>
+                <TextBlock Text="Optional. Uploading uses Valve's SteamCMD and is private by default. Steam passwords and Steam Guard codes are never entered or stored here."
+                           Classes="caption" Margin="0,0,0,12" />
+
+                <TextBlock Text="STEAMCMD (STEAMCMD.EXE)" Classes="micro" />
+                <Grid Margin="0,6,0,0" ColumnDefinitions="*,Auto">
+                  <TextBox Text="{Binding SteamCmdPath, Mode=TwoWay}" />
+                  <Button Grid.Column="1" Classes="small" Content="Browse" Margin="6,0,0,0"
+                          Command="{Binding BrowseSteamCmdCommand}" />
+                </Grid>
+                <Grid Margin="0,7,0,0" ColumnDefinitions="*,Auto">
+                  <Border Classes="chip" HorizontalAlignment="Left"
+                          Background="{Binding SteamCmdTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                          BorderBrush="{Binding SteamCmdTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+                    <TextBlock Text="{Binding SteamCmdStatus}" Classes="chipText"
+                               Foreground="{Binding SteamCmdTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}"
+                               TextTrimming="CharacterEllipsis" MaxWidth="300" />
+                  </Border>
+                  <Button Grid.Column="1" Classes="small" Content="Detect"
+                          Command="{Binding DetectSteamCmdCommand}" />
+                </Grid>
+
+                <TextBlock Text="STEAM ACCOUNT NAME" Classes="micro" Margin="0,12,0,0" />
+                <TextBox Margin="0,6,0,0"
+                         Text="{Binding SteamUsername, Mode=TwoWay}"
+                         ToolTip.Tip="Only the account name. Never enter your password here." />
+                <TextBlock Text="Just the account name, so uploads can reuse the SteamCMD session you created with Sign in. Wallpaper Studio has no password field by design."
+                           Classes="micro" Margin="0,6,0,0" TextWrapping="Wrap" />
+
+                <TextBlock Text="SteamCMD and Steam are Valve's tools and are distributed by Valve under Valve's terms. Wallpaper Studio never bundles or downloads them, and only uploads items you explicitly publish."
+                           Classes="micro" Margin="0,11,0,0" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <!-- Behaviour -->
+            <Border Classes="raisedCard" Padding="18,16" Margin="0,0,0,14">
+              <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                  <mi:MaterialIcon Kind="Tune" Width="15" Height="15"
+                                   Foreground="{StaticResource Brush.Accent}" />
+                  <TextBlock Text="Behaviour" Classes="sectionTitle" Margin="9,0,0,0" />
+                </StackPanel>
+                <CheckBox Classes="switch" Content="Skip unchanged exports"
+                          IsChecked="{Binding SkipAlreadyExported}" />
+                <TextBlock Text="A source is skipped only when its fingerprint and last-modified time still match. The per-batch override in the library can force a re-export."
+                           Classes="micro" Margin="53,5,0,12" TextWrapping="Wrap" />
+                <CheckBox Classes="switch" Content="Auto-approve extracted scene frames"
+                          IsChecked="{Binding AutoApproveScenes}" />
+                <TextBlock Text="Scenes that resolve to full resolution are exported without a manual step. Scenes below 1080p, frames that come out nearly all black, and every video still need your approval."
+                           Classes="micro" Margin="53,5,0,12" TextWrapping="Wrap" />
+                <CheckBox Classes="switch" Content="Open export folder after a batch"
+                          IsChecked="{Binding OpenExportFolderAfterBatch}" />
+                <TextBlock Text="Useful when you want to copy the JPEGs to a tablet immediately."
+                           Classes="micro" Margin="53,5,0,0" />
+              </StackPanel>
+            </Border>
+
+            <!-- Storage -->
+            <Border Classes="raisedCard" Padding="18,16" Margin="0,0,0,14">
+              <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                  <mi:MaterialIcon Kind="Harddisk" Width="15" Height="15"
+                                   Foreground="{StaticResource Brush.Accent}" />
+                  <TextBlock Text="Portable storage" Classes="sectionTitle" Margin="9,0,0,0" />
+                </StackPanel>
+
+                <Border Classes="chip" HorizontalAlignment="Left"
+                        Background="{Binding PortableTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                        BorderBrush="{Binding PortableTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+                  <TextBlock Text="{Binding PortableModeText}" Classes="chipText"
+                             Foreground="{Binding PortableTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}" />
+                </Border>
+
+                <TextBlock Text="DATA FOLDER" Classes="micro" Margin="0,12,0,0" />
+                <TextBlock Text="{Binding DataDirectory}" Classes="monoPath" Margin="0,4,0,0"
+                           TextWrapping="Wrap" TextTrimming="None" />
+                <TextBlock Text="STATE FILE" Classes="micro" Margin="0,10,0,0" />
+                <TextBlock Text="{Binding StateFile}" Classes="monoPath" Margin="0,4,0,0"
+                           TextWrapping="Wrap" TextTrimming="None" />
+                <TextBlock Text="{Binding StateRecordCount, StringFormat='{}{0:N0} remembered sources'}"
+                           Classes="micro" Margin="0,4,0,0" />
+
+                <StackPanel Orientation="Horizontal" Margin="0,12,0,0" Spacing="6">
+                  <Button Classes="small" Content="Open data folder" Command="{Binding OpenDataFolderCommand}" />
+                  <Button Classes="small" Content="Open state file" Command="{Binding OpenStateFolderCommand}" />
+                  <Button Classes="small" Content="Open logs" Command="{Binding OpenLogFolderCommand}" />
+                </StackPanel>
+
+                <TextBlock Text="Wallpaper Studio only reads local wallpaper files you select. It stays offline until you press Publish on the Workshop screen, which runs Valve's own SteamCMD."
+                           Classes="micro" Margin="0,12,0,0" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </Grid>
+
+        <TextBlock Text="Personal use only. Respect the rights of wallpaper creators; do not publish content you do not own or license."
+                   Classes="micro" HorizontalAlignment="Center" Margin="0,6,0,10"
+                   TextWrapping="Wrap" TextAlignment="Center" />
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

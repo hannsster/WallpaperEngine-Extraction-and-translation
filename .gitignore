@@ -8,6 +8,7 @@ publish/
 
 # Release archives
 *.zip
+*.tar.gz
 
 # Runtime data (portable state, cache, logs, staged exports)
 WallpaperStudioData/

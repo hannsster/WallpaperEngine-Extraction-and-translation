@@ -1,0 +1,317 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="WallpaperStudio.Views.LibraryView">
+
+  <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+
+    <!-- ============================== Header ============================== -->
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+      <StackPanel>
+        <TextBlock Text="Wallpaper Library" Classes="pageTitle" />
+        <TextBlock Text="{Binding CountsText}" Classes="pageSubtitle" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+        <Button Classes="secondary" Command="{Binding BrowseSourceCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <mi:MaterialIcon Kind="FolderOpen" Width="13" Height="13" />
+            <TextBlock Text="Choose folder" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button Classes="primary" Command="{Binding ScanCommand}">
+          <StackPanel Orientation="Horizontal" Spacing="7">
+            <mi:MaterialIcon Kind="Magnify" Width="13" Height="13" Foreground="White" />
+            <TextBlock Text="Scan library" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button Classes="secondary" Command="{Binding ExportAllCommand}" Content="Export approved" />
+      </StackPanel>
+    </Grid>
+
+    <!-- =========================== Startup notice ======================== -->
+    <Border Grid.Row="1" Classes="glassCard" Margin="0,14,0,0" Padding="14,12"
+            Background="#1FF5C46B" BorderBrush="#4DF5C46B"
+            IsVisible="{Binding $parent[Window].DataContext.HasStartupNotice}">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <mi:MaterialIcon Kind="Alert" Width="16" Height="16"
+                         Foreground="{StaticResource Brush.Warning}"
+                         VerticalAlignment="Top" Margin="0,1,0,0" />
+        <TextBlock Grid.Column="1" Text="{Binding $parent[Window].DataContext.StartupNotice}"
+                   Margin="11,0,12,0" TextWrapping="Wrap" FontSize="12.5" Foreground="#F6E3BF" />
+        <Button Grid.Column="2" Classes="icon" ToolTip.Tip="Dismiss"
+                Command="{Binding $parent[Window].DataContext.DismissStartupNoticeCommand}">
+          <mi:MaterialIcon Kind="Close" Width="12" Height="12"
+                           Foreground="{Binding $parent[Button].Foreground}" />
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- ============================== Toolbar ============================ -->
+    <Border Grid.Row="2" Classes="raisedCard" Margin="0,14,0,0" Padding="18,16">
+      <Grid ColumnDefinitions="*,Auto">
+
+        <StackPanel Margin="0,0,26,0">
+          <TextBlock Text="SOURCE FOLDER" Classes="micro" />
+          <Grid Margin="0,7,0,0" ColumnDefinitions="*,Auto">
+            <Border Classes="insetCard" Padding="12,9">
+              <Grid ColumnDefinitions="Auto,*">
+                <mi:MaterialIcon Kind="FolderOpen" Width="14" Height="14"
+                                 Foreground="{StaticResource Brush.Accent}" />
+                <TextBlock Grid.Column="1" Text="{Binding SourceFolderDisplay}" Margin="10,0,0,0"
+                           Classes="monoPath" VerticalAlignment="Center"
+                           ToolTip.Tip="{Binding SourceFolder}" />
+              </Grid>
+            </Border>
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" Spacing="6">
+              <Button Classes="small" Content="Browse" Command="{Binding BrowseSourceCommand}" />
+              <Button Classes="small" Content="Open" Command="{Binding OpenSourceFolderCommand}" />
+            </StackPanel>
+          </Grid>
+
+          <Grid Margin="0,10,0,0" ColumnDefinitions="Auto,*,Auto">
+            <TextBlock Text="EXPORTS" Classes="micro" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="{Binding ExportFolderDisplay}" Classes="monoPath"
+                       Margin="10,0,10,0" VerticalAlignment="Center"
+                       ToolTip.Tip="{Binding ExportFolderDisplay}" />
+            <Button Grid.Column="2" Classes="ghost" Content="Open exports"
+                    FontSize="11.5" Padding="8,4" Command="{Binding OpenExportFolderCommand}" />
+          </Grid>
+        </StackPanel>
+
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" MinWidth="200">
+          <CheckBox Classes="switch" Content="Re-export everything"
+                    IsChecked="{Binding ForceReExport}" />
+          <TextBlock Text="Ignores library memory for this batch." Classes="micro" Margin="53,4,0,0" />
+          <Button Classes="ghost" Content="Clear current library"
+                  HorizontalAlignment="Left" Padding="0,8,0,0" FontSize="11.5"
+                  Command="{Binding ClearCommand}" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- =========================== Stats + filters ====================== -->
+    <Grid Grid.Row="3" Margin="0,16,0,12" RowDefinitions="Auto,Auto">
+
+      <WrapPanel VerticalAlignment="Center">
+        <Border Classes="insetCard" Padding="14,9" Margin="0,0,10,0" MinWidth="112">
+          <StackPanel>
+            <TextBlock Text="{Binding DetectedCount, StringFormat='{}{0:N0}'}" FontSize="19" FontWeight="SemiBold" />
+            <TextBlock Text="Detected" Classes="micro" />
+          </StackPanel>
+        </Border>
+        <Border Classes="insetCard" Padding="14,9" Margin="0,0,10,0" MinWidth="112">
+          <StackPanel>
+            <TextBlock Text="{Binding ReadyCount, StringFormat='{}{0:N0}'}" FontSize="19" FontWeight="SemiBold"
+                       Foreground="{StaticResource Brush.Accent}" />
+            <TextBlock Text="Ready" Classes="micro" />
+          </StackPanel>
+        </Border>
+        <Border Classes="insetCard" Padding="14,9" Margin="0,0,10,0" MinWidth="112">
+          <StackPanel>
+            <TextBlock Text="{Binding NeedsReviewCount, StringFormat='{}{0:N0}'}" FontSize="19" FontWeight="SemiBold"
+                       Foreground="{StaticResource Brush.Warning}" />
+            <TextBlock Text="Need attention" Classes="micro" />
+          </StackPanel>
+        </Border>
+        <Border Classes="insetCard" Padding="14,9" Margin="0,0,10,0" MinWidth="112">
+          <StackPanel>
+            <TextBlock Text="{Binding ExportedCount, StringFormat='{}{0:N0}'}" FontSize="19" FontWeight="SemiBold"
+                       Foreground="{StaticResource Brush.Success}" />
+            <TextBlock Text="Exported" Classes="micro" />
+          </StackPanel>
+        </Border>
+        <Border Classes="insetCard" Padding="14,9" MinWidth="112">
+          <StackPanel>
+            <TextBlock Text="{Binding DuplicatesSkipped, StringFormat='{}{0:N0}'}" FontSize="19" FontWeight="SemiBold"
+                       Foreground="{StaticResource Brush.TextSecondary}" />
+            <TextBlock Text="Duplicates" Classes="micro" />
+          </StackPanel>
+        </Border>
+      </WrapPanel>
+
+      <StackPanel Grid.Row="1" Orientation="Horizontal" VerticalAlignment="Center"
+                  HorizontalAlignment="Right" Margin="0,10,0,0">
+        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,10,0">
+          <RadioButton Classes="filterPill" GroupName="Filter" Content="All"
+                       IsChecked="{Binding IsFilterAll, Mode=OneWay}"
+                       Command="{Binding SetFilterCommand}" CommandParameter="all" />
+          <RadioButton Classes="filterPill" GroupName="Filter" Content="Ready"
+                       IsChecked="{Binding IsFilterReady, Mode=OneWay}"
+                       Command="{Binding SetFilterCommand}" CommandParameter="ready" />
+          <RadioButton Classes="filterPill" GroupName="Filter" Content="Needs review"
+                       IsChecked="{Binding IsFilterReview, Mode=OneWay}"
+                       Command="{Binding SetFilterCommand}" CommandParameter="review" />
+          <RadioButton Classes="filterPill" GroupName="Filter" Content="Exported"
+                       IsChecked="{Binding IsFilterExported, Mode=OneWay}"
+                       Command="{Binding SetFilterCommand}" CommandParameter="exported" />
+        </StackPanel>
+        <TextBox Classes="modernText" Width="250"
+                 Watermark="Search title or path"
+                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" />
+      </StackPanel>
+    </Grid>
+
+    <!-- ============================== Results ============================ -->
+    <Grid Grid.Row="4">
+      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl ItemsSource="{Binding WallpaperView}" Margin="0,0,8,0">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Classes="glassCard" Width="292" Margin="0,0,14,14" Padding="11">
+                <StackPanel>
+                  <!-- Thumbnail -->
+                  <Border Height="150" CornerRadius="12" Background="#0E141F">
+                    <Grid>
+                      <Border CornerRadius="12">
+                        <Border.Background>
+                          <ImageBrush Source="{Binding Thumbnail, Converter={StaticResource JpegImage}}"
+                                      Stretch="UniformToFill" />
+                        </Border.Background>
+                      </Border>
+                      <mi:MaterialIcon Kind="ImageOutline" Width="34" Height="34" Foreground="#33FFFFFF"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                       IsVisible="{Binding HasThumbnail, Converter={StaticResource InverseBool}}" />
+
+                      <Border Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Top"
+                              Margin="8" Padding="7,3" Background="#99070A10" BorderBrush="#26FFFFFF">
+                        <StackPanel Orientation="Horizontal">
+                          <mi:MaterialIcon Kind="ImageOutline" Width="10" Height="10"
+                                           Foreground="{StaticResource Brush.TextSecondary}" />
+                          <TextBlock Text="{Binding SourceTypeLabel}" Classes="chipText"
+                                     Foreground="{StaticResource Brush.TextSecondary}" Margin="5,0,0,0" />
+                        </StackPanel>
+                      </Border>
+
+                      <Border Classes="chip" HorizontalAlignment="Right" VerticalAlignment="Top"
+                              Margin="8"
+                              Background="{Binding StatusTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                              BorderBrush="{Binding StatusTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+                        <TextBlock Text="{Binding StatusLabel}" Classes="chipText"
+                                   Foreground="{Binding StatusTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}" />
+                      </Border>
+
+                      <Border HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8"
+                              CornerRadius="7" Background="#B3070A10" Padding="7,3">
+                        <TextBlock Text="{Binding ResolutionText}" FontFamily="{StaticResource Font.Mono}"
+                                   FontSize="10.5" Foreground="#D7E1F2" />
+                      </Border>
+
+                      <ProgressBar Classes="slim" Height="3" VerticalAlignment="Bottom"
+                                   Margin="10,0,10,7" IsIndeterminate="True"
+                                   IsVisible="{Binding IsThumbnailLoading}" />
+                    </Grid>
+                  </Border>
+
+                  <!-- Info -->
+                  <TextBlock Text="{Binding Title}" Classes="cardTitle" Margin="2,11,2,0"
+                             TextWrapping="Wrap" MaxHeight="40" ToolTip.Tip="{Binding Title}" />
+                  <TextBlock Text="{Binding MetadataSummary}" Classes="micro" Margin="2,4,2,0" />
+
+                  <WrapPanel Margin="0,9,0,0">
+                    <Border Classes="chip" Margin="0,0,6,4"
+                            Background="{Binding StatusTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                            BorderBrush="{Binding StatusTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+                      <TextBlock Text="{Binding KindLabel}" Classes="chipText"
+                                 Foreground="{Binding StatusTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}" />
+                    </Border>
+                    <Border Classes="chip" Margin="0,0,6,4"
+                            Background="#1FF5C46B" BorderBrush="#40F5C46B"
+                            IsVisible="{Binding UsesPreviewFallback}">
+                      <TextBlock Text="Preview fallback" Classes="chipText"
+                                 Foreground="{StaticResource Brush.Warning}" />
+                    </Border>
+                    <Border Classes="chip" Margin="0,0,6,4"
+                            Background="#1F63D6A6" BorderBrush="#4063D6A6"
+                            IsVisible="{Binding IsExported}">
+                      <TextBlock Text="JPEG ready" Classes="chipText"
+                                 Foreground="{StaticResource Brush.Success}" />
+                    </Border>
+                    <Border Classes="chip" Margin="0,0,6,4"
+                            Background="#1F6C9BFF" BorderBrush="#406C9BFF"
+                            IsVisible="{Binding IsReverseSearching}">
+                      <TextBlock Text="Finding original" Classes="chipText"
+                                 Foreground="{StaticResource Brush.Accent}" />
+                    </Border>
+                    <Border Classes="chip" Margin="0,0,6,4"
+                            Background="#1F63D6A6" BorderBrush="#4063D6A6"
+                            ToolTip.Tip="A larger copy of this artwork was found by reverse image search."
+                            IsVisible="{Binding HasBetterOriginal}">
+                      <TextBlock Text="{Binding OriginalChipText}" Classes="chipText"
+                                 Foreground="{StaticResource Brush.Success}" />
+                    </Border>
+                    <Border Classes="chip" Margin="0,0,6,4"
+                            ToolTip.Tip="The source of this artwork was identified, but no larger copy was found."
+                            IsVisible="{Binding HasReverseMatches}">
+                      <TextBlock Text="Source found" Classes="chipText" />
+                    </Border>
+                    <Border Classes="chip" Margin="0,0,6,4"
+                            Background="{Binding ReverseResultsTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                            BorderBrush="{Binding ReverseResultsTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}"
+                            IsVisible="{Binding ShowReverseStatusChip}">
+                      <TextBlock Text="{Binding ReverseResultsHeader}" Classes="chipText"
+                                 Foreground="{Binding ReverseResultsTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}" />
+                    </Border>
+                  </WrapPanel>
+
+                  <TextBlock Text="{Binding ErrorMessage}" Classes="caption" Margin="2,2,2,0"
+                             Foreground="{StaticResource Brush.Danger}" MaxHeight="34"
+                             IsVisible="{Binding ErrorMessage, Converter={StaticResource IsNull}, ConverterParameter=invert}"
+                             ToolTip.Tip="{Binding ErrorMessage}" />
+
+                  <Grid Margin="0,10,0,0" ColumnDefinitions="Auto,*,Auto,Auto">
+                    <Button Classes="small" Content="Review frame" Margin="0,0,6,0"
+                            Command="{Binding $parent[UserControl].DataContext.ReviewItemCommand}"
+                            CommandParameter="{Binding}"
+                            IsVisible="{Binding RequiresApproval}" />
+                    <Button Grid.Column="1" Classes="primary" Content="Export JPEG"
+                            Padding="12,7" FontSize="12"
+                            Command="{Binding $parent[UserControl].DataContext.ExportItemCommand}"
+                            CommandParameter="{Binding}"
+                            IsEnabled="{Binding CanExportNow}" />
+                    <Button Grid.Column="2" Classes="icon" Margin="4,0,0,0"
+                            ToolTip.Tip="Look for the original artwork"
+                            IsVisible="{Binding RequiresApproval, Converter={StaticResource InverseBool}}"
+                            Command="{Binding $parent[UserControl].DataContext.FindOriginalCommand}"
+                            CommandParameter="{Binding}">
+                      <mi:MaterialIcon Kind="ImageSearch" Width="13" Height="13"
+                                       Foreground="{Binding $parent[Button].Foreground}" />
+                    </Button>
+                    <Button Grid.Column="3" Classes="ghost" Content="Open"
+                            FontSize="11.5" Padding="6,7"
+                            Command="{Binding $parent[UserControl].DataContext.OpenExportedFileCommand}"
+                            CommandParameter="{Binding}"
+                            IsVisible="{Binding IsExported}" />
+                  </Grid>
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <!-- Empty state -->
+      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="480"
+                  IsVisible="{Binding DetectedCount, Converter={StaticResource CountToBool}, ConverterParameter=invert}">
+        <Border Width="64" Height="64" CornerRadius="20" Background="{StaticResource Brush.AccentSoft}"
+                HorizontalAlignment="Center">
+          <mi:MaterialIcon Kind="ImageMultiple" Width="26" Height="26"
+                           Foreground="{StaticResource Brush.Accent}"
+                           HorizontalAlignment="Center" />
+        </Border>
+        <TextBlock Text="No wallpapers loaded yet" FontSize="18" FontWeight="SemiBold"
+                   HorizontalAlignment="Center" Margin="0,16,0,0" />
+        <TextBlock Text="Choose your Wallpaper Engine workshop folder, a project folder, or any folder of videos, images and .pkg scenes. Nothing is uploaded anywhere."
+                   Classes="pageSubtitle" TextAlignment="Center" Margin="0,8,0,0" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,18,0,0" Spacing="8">
+          <Button Classes="primary" Content="Choose source folder" Command="{Binding BrowseSourceCommand}" />
+          <Button Classes="secondary" Content="Scan now" Command="{Binding ScanCommand}" />
+        </StackPanel>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</UserControl>

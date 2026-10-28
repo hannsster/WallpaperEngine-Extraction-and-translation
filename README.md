@@ -1,6 +1,6 @@
 # Wallpaper Engine Extraction and Translation
 
-A portable Windows desktop tool for turning locally installed **Wallpaper Engine** wallpapers into static high-quality JPEGs, preparing images for a **manual** personal-use import back into Wallpaper Engine, and — if you ask it to — uploading wallpapers you own to the **Steam Workshop** through Valve's SteamCMD, **private by default**.
+A portable **Windows and Linux** desktop tool for turning locally installed **Wallpaper Engine** wallpapers into static high-quality JPEGs, preparing images for a **manual** personal-use import back into Wallpaper Engine, and — if you ask it to — uploading wallpapers you own to the **Steam Workshop** through Valve's SteamCMD, **private by default**.
 
 It can also look up the **original artwork** behind an extracted frame with reverse image search, so you can see the artist or source and, only if you confirm, replace a low-resolution candidate with a higher-resolution copy.
 
@@ -8,11 +8,19 @@ It can also look up the **original artwork** behind an extracted frame with reve
 
 ![Wallpaper Studio](src/WallpaperStudio/Assets/app-icon.png)
 
+Wallpaper Studio v2 ships two interchangeable front ends built on one shared core (`src/WallpaperStudio.Core`):
+
+- **WPF head** (`src/WallpaperStudio`) — the native Windows build, with the original custom window chrome.
+- **Avalonia head** (`src/WallpaperStudio.Avalonia`) — the cross-platform build used on Linux (and runnable on Windows). Same five screens, same acrylic look, same portable data and safety rules.
+
+Both heads read the same `settings.json` and `state.json`, so a portable data folder can be moved between them.
+
 ## Download
 
 Grab the latest portable build from the [**Releases**](../../releases) page:
 
-- **`WallpaperStudio-win-x64.zip`** — self-contained 64-bit Windows build. No .NET install required. Extract anywhere and run `WallpaperStudio.exe`.
+- **`WallpaperStudio-win-x64.zip`** — self-contained 64-bit Windows build (WPF head). No .NET install required. Extract anywhere and run `WallpaperStudio.exe`.
+- **`WallpaperStudio-linux-x64.tar.gz`** — self-contained 64-bit Linux build (Avalonia head). No .NET install required. Extract anywhere, run `chmod +x WallpaperStudio` if your archiver dropped the executable bit, then run `./WallpaperStudio`.
 - FFmpeg is optional (video frames only) and is not bundled; see [Requirements](#requirements).
 
 
@@ -43,19 +51,21 @@ Grab the latest portable build from the [**Releases**](../../releases) page:
   - builds new **scene** wallpapers from static images using a generated texture (**experimental**);
   - uploads **Private** by default, so items are visible only to your account;
   - never stores Steam credentials and never reports a publish it did not verify.
-- Works portably: settings, state, logs and caches live beside the executable when that folder is writable, with a `%LOCALAPPDATA%` fallback.
+- Works portably: settings, state, logs and caches live beside the executable when that folder is writable, with a `%LOCALAPPDATA%` (Windows) or `~/.local/share/WallpaperStudio` (Linux) fallback.
 
 ## Requirements
 
-- Windows 10 or Windows 11, x64
+- **Windows 10 or Windows 11, x64** (WPF head), or a **64-bit Linux desktop** (Avalonia head) with X11 or Wayland and the usual GTK/ICU libraries. The Linux build is self-contained and needs glibc 2.17 or newer.
 - .NET SDK 8.0 or newer to build
 - FFmpeg **optional**, required only for video frame extraction
-  - Place `ffmpeg.exe`/`ffprobe.exe` in an `ffmpeg` folder next to the app, add them to `PATH`, or choose the folder in Settings.
+  - Windows: place `ffmpeg.exe`/`ffprobe.exe` in an `ffmpeg` folder next to the app, add them to `PATH`, or choose the folder in Settings.
+  - Linux: install your distribution's `ffmpeg` package, put `ffmpeg`/`ffprobe` in an `ffmpeg` folder next to the app, or choose the folder in Settings.
   - FFmpeg is licensed separately from this project and is not bundled.
 - SteamCMD **optional**, required only for Workshop publishing
-  - Download it from Valve, place `steamcmd.exe` in a `steamcmd` folder next to the app, add it to `PATH`, or choose it in Settings.
-  - Sign in once inside Valve's own SteamCMD window. Wallpaper Studio never sees or stores your password or Steam Guard code.
+  - Windows uses `steamcmd.exe`; Linux uses `steamcmd.sh`. Install it from your distribution, place it in a `steamcmd` folder next to the app, add it to `PATH`, or choose it in Settings.
+  - Sign in once inside Valve's own SteamCMD window. On Linux the sign-in opens in a terminal emulator (`x-terminal-emulator`, GNOME Terminal, Konsole, Xfce Terminal or xterm). Wallpaper Studio never sees or stores your password or Steam Guard code.
   - SteamCMD and Steam are Valve's tools, distributed by Valve under Valve's terms; they are not bundled or downloaded by this app.
+- **Wallpaper Engine on Linux** runs as a Proton-hosted Windows application installed by Steam. Wallpaper Studio reads its files from the Steam library (including secondary libraries listed in `libraryfolders.vdf`) and launches it with `steam -applaunch 431960`.
 - Reverse image search **optional** and **off by default**
   - **trace.moe** and **IQDB** need no key. **SauceNAO** and **Google Vision** need a free API key of your own, pasted into Settings.
   - Keys are stored as plain text in `settings.json` on your PC. Free tiers are roughly 150 searches/month for SauceNAO and 1,000/month for the Vision Web Detection feature.
@@ -64,18 +74,24 @@ Grab the latest portable build from the [**Releases**](../../releases) page:
 
 ## Build
 
-```powershell
+```bash
 dotnet restore WallpaperStudio.sln
 dotnet build WallpaperStudio.sln -c Release
 ```
 
-Run from source:
+The solution builds both heads: the WPF app on Windows only, and the Avalonia app everywhere. Run from source:
 
-```powershell
+```bash
+# Windows WPF head
 dotnet run --project src/WallpaperStudio/WallpaperStudio.csproj
+
+# Cross-platform Avalonia head (Windows, Linux, macOS)
+dotnet run --project src/WallpaperStudio.Avalonia/WallpaperStudio.Avalonia.csproj
 ```
 
 ## Publish a portable build
+
+Windows (WPF head):
 
 ```powershell
 dotnet publish src/WallpaperStudio/WallpaperStudio.csproj `
@@ -88,11 +104,23 @@ dotnet publish src/WallpaperStudio/WallpaperStudio.csproj `
 
 The publish folder contains `WallpaperStudio.exe`. Keep `WallpaperStudioData/` and `Exports/` beside it if you want the portable layout. SkiaSharp's native assets are included automatically; use `IncludeNativeLibrariesForSelfExtract` for single-file publishing.
 
+Linux (Avalonia head) — the checked-in publish profile produces a single self-contained executable:
+
+```bash
+dotnet publish src/WallpaperStudio.Avalonia/WallpaperStudio.Avalonia.csproj -p:PublishProfile=linux-x64
+chmod +x publish/linux-x64/WallpaperStudio
+tar -czf WallpaperStudio-linux-x64.tar.gz -C publish/linux-x64 WallpaperStudio
+```
+
+The profile sets `linux-x64`, self-contained, single-file, compression and no debug symbols. To target a different architecture, add `-r linux-arm64` and a matching profile.
+
+Build the Avalonia head for Windows with the same command and `-r win-x64` if you want to try the cross-platform UI there.
+
 ## Usage
 
 1. Open the **Library** page and choose your source folder. Typical locations:
-   - `...\Steam\steamapps\workshop\content\431960`
-   - `...\Steam\steamapps\common\wallpaper_engine\projects\myprojects`
+   - Windows: `...\Steam\steamapps\workshop\content\431960`, `...\Steam\steamapps\common\wallpaper_engine\projects\myprojects`
+   - Linux: `~/.steam/steam/steamapps/workshop/content/431960`, `~/.local/share/Steam/steamapps/workshop/content/431960`, or the same path inside any library listed in `libraryfolders.vdf` (including the Flatpak Steam location)
    - any folder containing isolated videos/images/projects
 2. Select **Scan library**. Detection is read-only.
 3. For images, press **Export JPEG**. The magnifier button on the card opens the same frame review without an approval step, which is where reverse search results appear.
@@ -133,7 +161,7 @@ IQDB is keyless but rate-limited by the site itself, so it is queried one image 
    - **Add video…** — a loose video becomes a new `video` wallpaper project.
    - **Add image…** — a static image becomes a new `scene` wallpaper project using a generated texture (**experimental** — verify it in Wallpaper Engine first).
 3. For new items, press **Build** to generate the project folder under the app's `publish` data folder. Review it before uploading.
-4. Point Settings (or the card on the page) at `steamcmd.exe`, then press **Sign in to SteamCMD** once and sign in inside Valve's window.
+4. Point Settings (or the card on the page) at `steamcmd.exe` (Windows) or `steamcmd.sh` (Linux), then press **Sign in to SteamCMD** once and sign in inside Valve's window.
 5. Set a **Visibility** per item — new items default to **Private (hidden)**.
 6. Press **Publish** (or **Publish all**). The page streams SteamCMD's own output so you can see exactly what happened.
 
@@ -165,7 +193,7 @@ When the executable directory is writable:
 <app>\Exports\
 ```
 
-Otherwise the same structure is created under `%LOCALAPPDATA%\WallpaperStudio`. Writes are atomic and corrupt state files are archived instead of being overwritten silently.
+Otherwise the same structure is created under `%LOCALAPPDATA%\WallpaperStudio` on Windows or `~/.local/share/WallpaperStudio` on Linux, with exports in `%USERPROFILE%\Pictures\Wallpaper Studio Exports` or `~/Pictures/Wallpaper Studio Exports`. Writes are atomic and corrupt state files are archived instead of being overwritten silently.
 
 `state.json` remembers approvals, tosses, exports and source fingerprints, so unchanged sources can be skipped. Re-approving a previously exported item clears its export status so the next scan offers it again. **Re-export everything** overrides the skip logic for one batch. It also remembers the Workshop ids of items you published, so a re-publish updates the same item.
 
@@ -188,53 +216,58 @@ Otherwise the same structure is created under `%LOCALAPPDATA%\WallpaperStudio`. 
 ## Project structure
 
 ```text
-src/WallpaperStudio/
-  App.xaml, App.xaml.cs          Startup composition and global error handling
-  MainWindow.xaml                Custom chrome, navigation rail, status bar
-  Themes/Theme.xaml              Dark glass theme and control styles
-  Models/                        Sources, settings, state, import queue models
+src/WallpaperStudio.Core/          Shared, UI-neutral code (net8.0 + net8.0-windows)
+  Models/                          Sources, settings, state, import/publish queue models
   Services/
-    SourceScanner.cs             Recursive detection of projects/videos/images/pkg
-    ProjectManifestReader.cs     Safe top-level project.json hints
-    PreviewResolver.cs           Sibling/embedded preview discovery
-    PkgPreviewExtractor.cs       Conservative embedded JPEG/PNG scan
-    SceneFrameExtractor.cs       Full-resolution scene → image extraction
-    PkgArchive.cs                Read-only PKGV package index reader
-    TexDecoder.cs                Read-only TEXB texture header/decoder
-    BlockTextureDecoder.cs       BC1/BC2/BC3/RGBA8/RG8/R8 → RGBA
-    Lz4BlockDecoder.cs           LZ4 block decompression for texture mips
-    FrameAnalyzer.cs             All-black frame detection and frame quality scoring
-    FfmpegService.cs             Locate FFmpeg, probe media, extract frames and filmstrips
-    ReverseSearch\
-      ReverseSearchService.cs    Orchestrates providers, ranking, cache and downloads
-      ReverseImageProvider.cs    Provider contract and shared result model
-      SauceNaoProvider.cs        SauceNAO JSON API
-      IqdbProvider.cs            IQDB public search form (parsed result table)
-      TraceMoeProvider.cs        trace.moe scene identification
-      GoogleVisionProvider.cs    Cloud Vision Web Detection
-      BooruEnricher.cs           Danbooru/Yande.re/Konachan size + file URLs
-      ImageDimensionProbe.cs     HTTP Range size probe for unknown images
-      ReverseSearchCache.cs      Per-query JSON, thumbnails and daily usage
-      ReverseSearchHttp.cs       Shared HttpClient, retries and error mapping
-    ImageService.cs              SkiaSharp probing and thumbnail cache
-    SkiaImage.cs                 Decode, EXIF orientation, resize, JPEG encode
-    ExportService.cs             Approved-frame JPEG export and state updates
-    ImportService.cs             Manual import staging and instructions
-    SteamCmdService.cs           Locate/sign in/run Valve's SteamCMD honestly
-    WorkshopVdfWriter.cs         Build/parse the workshop_build_item VDF
-    WallpaperProjectBuilder.cs   Build new project folders from images/videos
-    TexWriter.cs                 Minimal TEXB0003 texture container (experimental)
-    StateStore.cs                Portable, atomic library and publish memory
-    SettingsService.cs           Portable settings
-    WallpaperEngineLocator.cs    Read-only installation discovery
-  ViewModels/                    Library, review, import, publish, settings, shell
-  Views/                         Five pages plus the low-resolution dialog
-  Infrastructure/                Paths, logging, MVVM primitives, converters, DWM
+    SourceScanner.cs               Recursive detection of projects/videos/images/pkg
+    ProjectManifestReader.cs       Safe top-level project.json hints
+    PkgPreviewExtractor.cs         Conservative embedded JPEG/PNG scan
+    SceneFrameExtractor.cs         Full-resolution scene → image extraction
+    PkgArchive.cs                  Read-only PKGV package index reader
+    TexDecoder.cs                  Read-only TEXB texture header/decoder
+    BlockTextureDecoder.cs         BC1/BC2/BC3/RGBA8/RG8/R8 → RGBA
+    Lz4BlockDecoder.cs             LZ4 block decompression for texture mips
+    FrameAnalyzer.cs               All-black frame detection and frame quality scoring
+    FfmpegService.cs               Locate FFmpeg, probe media, extract frames and filmstrips
+    ImageService.cs                SkiaSharp probing and thumbnail cache
+    SkiaImage.cs                   Decode, EXIF orientation, resize, JPEG encode
+    ExportService.cs               Approved-frame JPEG export and state updates
+    ImportService.cs               Manual import staging and instructions
+    SteamCmdService.cs             Locate/sign in/run Valve's SteamCMD honestly
+    WorkshopVdfWriter.cs           Build/parse the workshop_build_item VDF
+    WallpaperProjectBuilder.cs     Build new project folders from images/videos
+    TexWriter.cs                   Minimal TEXB0003 texture container (experimental)
+    StateStore.cs                  Portable, atomic library and publish memory
+    SettingsService.cs             Portable settings
+    WallpaperEngineLocator.cs      Steam/Proton discovery and Linux launch through Steam
+    DialogService.cs               IDialogService contract
+    ReverseSearch/                 Provider clients, ranking, cache and downloads
+  ViewModels/                      Library, review, import, publish, settings, shell
+  Infrastructure/                  Portable paths, platform shell, logging, MVVM, UI thread
+
+src/WallpaperStudio/               WPF head (Windows)
+  App.xaml, App.xaml.cs            Composition and global error handling
+  MainWindow.xaml                  Custom chrome, navigation rail, status bar
+  Themes/Theme.xaml                Dark glass theme and control styles
+  Views/                           Five pages plus the low-resolution dialog
+  Services/WpfDialogService.cs     Native pickers, dialogs and clipboard
+  Infrastructure/                  Converters and DWM acrylic
+
+src/WallpaperStudio.Avalonia/      Avalonia head (Windows + Linux)
+  Program.cs, App.axaml(.cs)       Composition, services and DataTemplates
+  MainWindow.axaml                 Custom chrome, navigation rail, status bar
+  Themes/Theme.axaml               Shared palette, templates and control styles
+  Views/                           Five pages plus dialogs (Material icons)
+  Services/AvaloniaDialogService.cs StorageProvider pickers, async dialogs, shell
+  Converters/AppConverters.cs      Thumbnail, tone and visibility converters
+  Properties/PublishProfiles/      linux-x64 self-contained publish profile
 ```
 
 ## Third-party components
 
 - **SkiaSharp** — MIT license. Used for image decode, orientation, resizing and JPEG encoding.
+- **Avalonia** — MIT license. Cross-platform UI toolkit used by the Linux head.
+- **Material.Icons.Avalonia** — MIT license. Icon set used by the Avalonia UI.
 - **FFmpeg** — separate project, typically LGPL/GPL depending on the build. Not bundled or downloaded by this app. If you redistribute FFmpeg, include its license and source offer.
 - **SteamCMD** — Valve's command-line Steam client. Distributed by Valve under Steam's terms; not bundled or downloaded by this app. Used only when you publish.
 - **Reverse image search providers** — traffic goes to [trace.moe](https://trace.moe), [IQDB](https://iqdb.org), [SauceNAO](https://saucenao.com) and, if you add a key, Google Cloud Vision, each under its own terms and privacy policy. Optional size/URL enrichment uses the public Danbooru, Yande.re and Konachan JSON APIs. No key, image or result is shared with this project; all requests come from your own machine and your own quotas.

@@ -66,6 +66,7 @@
     <inf:HumanSizeConverter x:Key="HumanSize" />
     <inf:TubeTimeConverter x:Key="TubeTime" />
     <inf:ToneBrushConverter x:Key="ToneBrush" />
+    <inf:JpegImageConverter x:Key="JpegImage" />
     <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
     <!-- ============================ Typography =========================== -->

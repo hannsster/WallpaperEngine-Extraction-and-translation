@@ -86,7 +86,7 @@
                             <Grid>
                                 <Border CornerRadius="14">
                                     <Border.Background>
-                                        <ImageBrush ImageSource="{Binding PreviewImage}" Stretch="Uniform" />
+                                        <ImageBrush ImageSource="{Binding PreviewImage, Converter={StaticResource JpegImage}}" Stretch="Uniform" />
                                     </Border.Background>
                                 </Border>
 
@@ -216,7 +216,7 @@
                                                     <StackPanel>
                                                         <Border Height="44" CornerRadius="8,8,0,0">
                                                             <Border.Background>
-                                                                <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                                                <ImageBrush ImageSource="{Binding Thumbnail, Converter={StaticResource JpegImage}}" Stretch="UniformToFill" />
                                                             </Border.Background>
                                                         </Border>
                                                         <Border Background="#66070A10" CornerRadius="0,0,8,8" Padding="3,2">
@@ -312,7 +312,7 @@
                                                     <Grid>
                                                         <Border CornerRadius="9">
                                                             <Border.Background>
-                                                                <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                                                <ImageBrush ImageSource="{Binding Thumbnail, Converter={StaticResource JpegImage}}" Stretch="UniformToFill" />
                                                             </Border.Background>
                                                         </Border>
                                                         <TextBlock Text="&#xE8B9;" FontFamily="{StaticResource Font.Icon}" FontSize="18"

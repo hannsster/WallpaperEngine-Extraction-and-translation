@@ -1,0 +1,193 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        x:Class="WallpaperStudio.MainWindow"
+        Title="Wallpaper Studio"
+        Icon="/Assets/app-icon.ico"
+        Width="1320" Height="880"
+        MinWidth="1040" MinHeight="660"
+        WindowStartupLocation="CenterScreen"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaChromeHints="NoChrome"
+        ExtendClientAreaTitleBarHeightHint="-1"
+        Background="{StaticResource Brush.WindowBackground}">
+
+  <Grid>
+    <!-- Ambient light. Purely decorative and non-interactive. -->
+    <Ellipse Fill="{StaticResource Brush.AmbientGlow}" IsHitTestVisible="False"
+             HorizontalAlignment="Left" VerticalAlignment="Top"
+             Width="1000" Height="760" Margin="-320,-360,0,0" />
+    <Ellipse Fill="{StaticResource Brush.AmbientGlowWarm}" IsHitTestVisible="False"
+             HorizontalAlignment="Right" VerticalAlignment="Bottom"
+             Width="820" Height="620" Margin="0,0,-260,-280" />
+
+    <Grid RowDefinitions="48,*,42">
+
+      <!-- ============================ Title bar ============================ -->
+      <Border Grid.Row="0" Name="TitleBar" Background="#33000000"
+              BorderBrush="{StaticResource Brush.BorderFaint}" BorderThickness="0,0,0,1"
+              PointerPressed="TitleBar_PointerPressed">
+        <Grid Margin="18,0,10,0" ColumnDefinitions="Auto,*,Auto">
+
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <Border Width="26" Height="26" CornerRadius="8"
+                    Background="{StaticResource Brush.AccentGradient}"
+                    BoxShadow="0 0 34 0 #524F7BE8">
+              <mi:MaterialIcon Kind="ImageMultiple" Width="15" Height="15"
+                               Foreground="White" HorizontalAlignment="Center" />
+            </Border>
+            <StackPanel Margin="11,0,0,0" VerticalAlignment="Center" Spacing="1">
+              <TextBlock Text="Wallpaper Studio" FontWeight="SemiBold" FontSize="13" />
+              <TextBlock Text="Personal wallpaper toolkit" Classes="micro" />
+            </StackPanel>
+          </StackPanel>
+
+          <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+            <Border Classes="chip" Margin="0,0,12,0"
+                    Background="{Binding StorageTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                    BorderBrush="{Binding StorageTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+              <StackPanel Orientation="Horizontal">
+                <Ellipse Classes="statusDot"
+                         Fill="{Binding StorageTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}" />
+                <TextBlock Text="{Binding StorageBadge}" Margin="6,0,0,0" Classes="chipText"
+                           Foreground="{Binding StorageTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}" />
+              </StackPanel>
+            </Border>
+            <Button Classes="icon" ToolTip.Tip="Minimize" Click="MinimizeButton_Click">
+              <mi:MaterialIcon Kind="WindowMinimize" Width="12" Height="12"
+                               Foreground="{Binding $parent[Button].Foreground}" />
+            </Button>
+            <Button Classes="icon" ToolTip.Tip="Maximize" Click="MaximizeButton_Click">
+              <mi:MaterialIcon Name="MaximizeIcon" Kind="WindowMaximize" Width="12" Height="12"
+                               Foreground="{Binding $parent[Button].Foreground}" />
+            </Button>
+            <Button Classes="closeIcon" ToolTip.Tip="Close" Click="CloseButton_Click">
+              <mi:MaterialIcon Kind="Close" Width="12" Height="12"
+                               Foreground="{Binding $parent[Button].Foreground}" />
+            </Button>
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <!-- ============================= Body ============================== -->
+      <Grid Grid.Row="1" ColumnDefinitions="236,*">
+
+        <!-- Navigation rail -->
+        <Border Background="#4D000000" BorderBrush="{StaticResource Brush.BorderFaint}"
+                BorderThickness="0,0,1,0">
+          <Grid Margin="14,18,14,14" RowDefinitions="Auto,*,Auto">
+            <StackPanel Spacing="2">
+              <TextBlock Text="WORKSPACE" Classes="micro" Margin="12,0,0,8" />
+
+              <RadioButton Classes="navItem" GroupName="Nav"
+                           IsChecked="{Binding IsLibraryPage, Mode=OneWay}"
+                           Command="{Binding ShowLibraryCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <mi:MaterialIcon Kind="ViewDashboard" Width="16" Height="16"
+                                   Foreground="{Binding $parent[RadioButton].Foreground}" />
+                  <TextBlock Text="Library" VerticalAlignment="Center" />
+                </StackPanel>
+              </RadioButton>
+
+              <RadioButton Classes="navItem" GroupName="Nav"
+                           IsChecked="{Binding IsApprovalPage, Mode=OneWay}"
+                           Command="{Binding ShowApprovalCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <mi:MaterialIcon Kind="ImageFrame" Width="16" Height="16"
+                                   Foreground="{Binding $parent[RadioButton].Foreground}" />
+                  <TextBlock Text="Frame review" VerticalAlignment="Center" />
+                </StackPanel>
+              </RadioButton>
+
+              <RadioButton Classes="navItem" GroupName="Nav"
+                           IsChecked="{Binding IsImportPage, Mode=OneWay}"
+                           Command="{Binding ShowImportCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <mi:MaterialIcon Kind="PlaylistPlus" Width="16" Height="16"
+                                   Foreground="{Binding $parent[RadioButton].Foreground}" />
+                  <TextBlock Text="Import queue" VerticalAlignment="Center" />
+                </StackPanel>
+              </RadioButton>
+
+              <RadioButton Classes="navItem" GroupName="Nav"
+                           IsChecked="{Binding IsPublishPage, Mode=OneWay}"
+                           Command="{Binding ShowPublishCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <mi:MaterialIcon Kind="CloudUpload" Width="16" Height="16"
+                                   Foreground="{Binding $parent[RadioButton].Foreground}" />
+                  <TextBlock Text="Publish to Workshop" VerticalAlignment="Center" />
+                </StackPanel>
+              </RadioButton>
+
+              <RadioButton Classes="navItem" GroupName="Nav"
+                           IsChecked="{Binding IsSettingsPage, Mode=OneWay}"
+                           Command="{Binding ShowSettingsCommand}">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <mi:MaterialIcon Kind="Cog" Width="16" Height="16"
+                                   Foreground="{Binding $parent[RadioButton].Foreground}" />
+                  <TextBlock Text="Settings" VerticalAlignment="Center" />
+                </StackPanel>
+              </RadioButton>
+            </StackPanel>
+
+            <StackPanel Grid.Row="2" Spacing="4">
+              <Border Classes="insetCard" Padding="12" Margin="0,0,0,8">
+                <StackPanel Spacing="4">
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <Ellipse Classes="statusDot" Fill="{StaticResource Brush.Success}" />
+                    <TextBlock Text="LOCAL LIBRARY MEMORY" Classes="micro" />
+                  </StackPanel>
+                  <TextBlock Text="{Binding KnownRecords, StringFormat='{}{0:N0} remembered sources'}"
+                             Classes="caption" Margin="0,3,0,0" />
+                  <TextBlock Text="{Binding DataLocation}" Classes="monoPath" MaxWidth="176" />
+                  <Button Classes="ghost" Content="Open log folder" HorizontalAlignment="Left"
+                          Padding="0,6,0,0" FontSize="11.5"
+                          Command="{Binding OpenLogFolderCommand}" />
+                </StackPanel>
+              </Border>
+              <TextBlock Text="{Binding VersionText}" Classes="micro" Margin="12,0,0,2" />
+              <TextBlock Text="For personal use only" Classes="micro" Margin="12,0,0,0" />
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <!-- Page host -->
+        <Grid Grid.Column="1" RowDefinitions="*,Auto">
+          <ContentControl Grid.Row="0" Content="{Binding CurrentPage}" Margin="26,20,26,0"
+                          HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                          Focusable="False" />
+
+          <!-- Status bar -->
+          <Border Grid.Row="1" Background="#40000000" BorderBrush="{StaticResource Brush.BorderFaint}"
+                  BorderThickness="0,1,0,0" Margin="0,16,0,0">
+            <Grid Margin="22,0,14,0" ColumnDefinitions="*,240,Auto">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Ellipse Width="7" Height="7" VerticalAlignment="Center"
+                         Fill="{StaticResource Brush.Accent}"
+                         IsVisible="{Binding Shell.IsBusy}" />
+                <TextBlock Text="{Binding Shell.StatusMessage}" VerticalAlignment="Center"
+                           Margin="9,0,0,0" FontSize="11.5"
+                           Foreground="{StaticResource Brush.TextSecondary}"
+                           TextTrimming="CharacterEllipsis" MaxWidth="640" />
+              </StackPanel>
+
+              <StackPanel Grid.Column="1" VerticalAlignment="Center"
+                          IsVisible="{Binding Shell.IsBusy}" Spacing="3">
+                <TextBlock Text="{Binding Shell.OperationTitle}" Classes="micro"
+                           HorizontalAlignment="Right" />
+                <ProgressBar Classes="slim"
+                             Value="{Binding Shell.ProgressValue, Mode=OneWay}"
+                             IsIndeterminate="{Binding Shell.IsProgressIndeterminate, Mode=OneWay}" />
+              </StackPanel>
+
+              <Button Grid.Column="2" Content="Cancel" Classes="small"
+                      Margin="16,0,0,0" VerticalAlignment="Center"
+                      Command="{Binding Shell.CancelCommand}"
+                      IsVisible="{Binding Shell.IsBusy}" />
+            </Grid>
+          </Border>
+        </Grid>
+      </Grid>
+    </Grid>
+  </Grid>
+</Window>

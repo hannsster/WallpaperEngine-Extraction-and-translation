@@ -1,0 +1,283 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="WallpaperStudio.Views.PublishView">
+
+  <Grid RowDefinitions="Auto,Auto,Auto,*,Auto">
+
+    <!-- ============================== Header ============================== -->
+    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+      <StackPanel>
+        <TextBlock Text="Publish to Workshop" Classes="pageTitle" />
+        <TextBlock Text="Upload existing projects or build new ones from videos and images. Private by default; Steam credentials are never stored."
+                   Classes="pageSubtitle" />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+        <Button Classes="secondary" Content="Add project folder…" Command="{Binding AddProjectFolderCommand}" />
+        <Button Classes="secondary" Content="Add video…" Command="{Binding AddVideosCommand}" />
+        <Button Classes="secondary" Content="Add image…" Command="{Binding AddImagesCommand}" />
+      </StackPanel>
+    </Grid>
+
+    <!-- ========================== SteamCMD + safety ======================= -->
+    <Grid Grid.Row="1" Margin="0,14,0,0" ColumnDefinitions="*,*">
+
+      <Border Classes="raisedCard" Padding="16,13" Margin="0,0,8,0">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <Border Width="34" Height="34" CornerRadius="10" Background="{StaticResource Brush.AccentSoft}"
+                  VerticalAlignment="Top">
+            <mi:MaterialIcon Kind="Package" Width="15" Height="15"
+                             Foreground="{StaticResource Brush.Accent}"
+                             HorizontalAlignment="Center" />
+          </Border>
+          <StackPanel Grid.Column="1" Margin="11,0,12,0">
+            <TextBlock Text="SteamCMD" FontSize="13" FontWeight="SemiBold" />
+            <TextBox Margin="0,6,0,0"
+                     Watermark="Path to steamcmd"
+                     Text="{Binding SteamCmdPath, Mode=TwoWay}"
+                     ToolTip.Tip="Path to steamcmd" />
+            <TextBox Margin="0,6,0,0"
+                     Watermark="Steam account name"
+                     Text="{Binding SteamUsername, Mode=TwoWay}"
+                     ToolTip.Tip="Your Steam account name (not your password)" />
+            <Border Classes="chip" HorizontalAlignment="Left" Margin="0,7,0,0"
+                    Background="{Binding SteamCmdTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                    BorderBrush="{Binding SteamCmdTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+              <TextBlock Text="{Binding SteamCmdStatus}" Classes="chipText"
+                         Foreground="{Binding SteamCmdTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}"
+                         TextTrimming="CharacterEllipsis" MaxWidth="320" />
+            </Border>
+            <TextBlock Text="{Binding SteamCmdStateText}" Classes="micro" Margin="0,6,0,0" TextWrapping="Wrap" />
+          </StackPanel>
+          <StackPanel Grid.Column="2" VerticalAlignment="Top" Spacing="6">
+            <Button Classes="secondary" Content="Sign in to SteamCMD" Command="{Binding SignInCommand}" />
+            <Button Classes="small" Content="Browse" Command="{Binding BrowseSteamCmdCommand}" />
+            <Button Classes="small" Content="Detect" Command="{Binding DetectSteamCmdCommand}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Border Grid.Column="1" Classes="raisedCard" Padding="16,13" Margin="8,0,0,0">
+        <Grid ColumnDefinitions="Auto,*">
+          <Border Width="34" Height="34" CornerRadius="10" Background="#1F63D6A6" VerticalAlignment="Top">
+            <mi:MaterialIcon Kind="ShieldCheck" Width="15" Height="15"
+                             Foreground="{StaticResource Brush.Success}"
+                             HorizontalAlignment="Center" />
+          </Border>
+          <StackPanel Grid.Column="1" Margin="11,0,0,0">
+            <TextBlock Text="Private by default" FontSize="13" FontWeight="SemiBold" />
+            <TextBlock TextWrapping="Wrap" Classes="caption" Margin="0,3,0,0"
+                       Text="New items upload as Private, visible only to your account. Wallpaper Studio uses Valve's documented SteamCMD workshop_build_item script and reports success only when a real Workshop id is written back — it never fakes a result. Image-to-scene generation is experimental; verify it in Wallpaper Engine before sharing." />
+            <Button Classes="ghost" Content="How does this work?" HorizontalAlignment="Left"
+                    Padding="0,6,0,0" FontSize="11.5" Command="{Binding PublishHelpCommand}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- ========================== Stats + actions ========================= -->
+    <Grid Grid.Row="2" Margin="0,14,0,10" ColumnDefinitions="Auto,*,Auto">
+
+      <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+        <Border Classes="insetCard" Padding="13,8" Margin="0,0,8,0" MinWidth="92">
+          <StackPanel>
+            <TextBlock Text="{Binding TotalCount, StringFormat='{}{0:N0}'}" FontSize="18" FontWeight="SemiBold" />
+            <TextBlock Text="Queued" Classes="micro" />
+          </StackPanel>
+        </Border>
+        <Border Classes="insetCard" Padding="13,8" Margin="0,0,8,0" MinWidth="92">
+          <StackPanel>
+            <TextBlock Text="{Binding ReadyCount, StringFormat='{}{0:N0}'}" FontSize="18" FontWeight="SemiBold"
+                       Foreground="{StaticResource Brush.Accent}" />
+            <TextBlock Text="Ready" Classes="micro" />
+          </StackPanel>
+        </Border>
+        <Border Classes="insetCard" Padding="13,8" Margin="0,0,8,0" MinWidth="92">
+          <StackPanel>
+            <TextBlock Text="{Binding PublishedCount, StringFormat='{}{0:N0}'}" FontSize="18" FontWeight="SemiBold"
+                       Foreground="{StaticResource Brush.Success}" />
+            <TextBlock Text="Published" Classes="micro" />
+          </StackPanel>
+        </Border>
+        <Border Classes="insetCard" Padding="13,8" MinWidth="92">
+          <StackPanel>
+            <TextBlock Text="{Binding FailedCount, StringFormat='{}{0:N0}'}" FontSize="18" FontWeight="SemiBold"
+                       Foreground="{StaticResource Brush.Danger}" />
+            <TextBlock Text="Failed" Classes="micro" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+
+      <TextBlock Grid.Column="1" VerticalAlignment="Center" Margin="14,0"
+                 Text="{Binding QueueSummary}" Classes="caption" TextTrimming="CharacterEllipsis" />
+
+      <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+        <Button Classes="ghost" Content="Open folder" Command="{Binding OpenPublishFolderCommand}" />
+        <Button Classes="ghost" Content="Clear" Command="{Binding ClearCommand}" />
+        <Button Classes="primary" Content="Publish all" Command="{Binding PublishAllCommand}" />
+      </StackPanel>
+    </Grid>
+
+    <!-- ================================ Items ============================= -->
+    <Grid Grid.Row="3">
+      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl ItemsSource="{Binding Items}" Margin="0,0,8,0">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Classes="glassCard" Padding="12" Margin="0,0,0,10">
+                <Grid RowDefinitions="Auto,Auto">
+
+                  <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto">
+
+                    <!-- Thumbnail -->
+                    <Border Width="104" Height="60" CornerRadius="9" Background="#0E141F"
+                            VerticalAlignment="Top">
+                      <Grid>
+                        <Border CornerRadius="9">
+                          <Border.Background>
+                            <ImageBrush Source="{Binding Thumbnail, Converter={StaticResource JpegImage}}"
+                                        Stretch="UniformToFill" />
+                          </Border.Background>
+                        </Border>
+                        <mi:MaterialIcon Kind="ImageOutline" Width="20" Height="20" Foreground="#44FFFFFF"
+                                         HorizontalAlignment="Center"
+                                         IsVisible="{Binding HasThumbnail, Converter={StaticResource InverseBool}}" />
+                      </Grid>
+                    </Border>
+
+                    <!-- Info -->
+                    <StackPanel Grid.Column="1" Margin="12,0,12,0">
+                      <TextBox FontWeight="SemiBold"
+                               Watermark="Title"
+                               Text="{Binding Title, Mode=TwoWay}" />
+                      <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <Border Classes="chip"
+                                Background="{Binding StateTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                                BorderBrush="{Binding StateTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+                          <TextBlock Text="{Binding StateLabel}" Classes="chipText"
+                                     Foreground="{Binding StateTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}" />
+                        </Border>
+                        <TextBlock Text="{Binding KindLabel}" Classes="micro" Margin="8,0,0,0"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding ContentSizeText}" Classes="micro" Margin="8,0,0,0"
+                                   VerticalAlignment="Center" />
+                      </StackPanel>
+                      <TextBlock Text="{Binding ContentFolderDisplay}" Classes="monoPath" Margin="0,5,0,0"
+                                 MaxWidth="440" />
+                      <TextBlock Text="{Binding StatusDetail}" Classes="micro" Margin="0,4,0,0"
+                                 IsVisible="{Binding StatusDetail, Converter={StaticResource IsNull}, ConverterParameter=invert}" />
+                      <TextBlock Text="{Binding WarningText}" Classes="micro" Margin="0,4,0,0"
+                                 Foreground="{StaticResource Brush.Warning}" TextWrapping="Wrap" MaxWidth="520"
+                                 IsVisible="{Binding HasWarning}" />
+                      <TextBlock Text="{Binding ErrorMessage}" Classes="micro" Margin="0,4,0,0"
+                                 Foreground="{StaticResource Brush.Danger}" TextWrapping="Wrap" MaxWidth="520"
+                                 IsVisible="{Binding ErrorMessage, Converter={StaticResource IsNull}, ConverterParameter=invert}" />
+                    </StackPanel>
+
+                    <!-- Visibility -->
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="0,0,14,0" MinWidth="150">
+                      <TextBlock Text="VISIBILITY" Classes="micro" />
+                      <ComboBox Margin="0,5,0,0"
+                                ItemsSource="{Binding $parent[UserControl].DataContext.VisibilityChoices}"
+                                SelectedItem="{Binding VisibilityLabel, Mode=TwoWay}"
+                                IsEnabled="{Binding $parent[UserControl].DataContext.IsNotBusy}" />
+                    </StackPanel>
+
+                    <!-- Actions -->
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+                      <Button Classes="secondary" Content="Build"
+                              Command="{Binding $parent[UserControl].DataContext.BuildItemCommand}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding RequiresBuild}" />
+                      <Button Classes="small" Content="Publish"
+                              Command="{Binding $parent[UserControl].DataContext.PublishItemCommand}"
+                              CommandParameter="{Binding}"
+                              IsEnabled="{Binding CanPublish}" />
+                      <Button Classes="icon" ToolTip.Tip="Open content folder"
+                              Command="{Binding $parent[UserControl].DataContext.OpenItemFolderCommand}"
+                              CommandParameter="{Binding}">
+                        <mi:MaterialIcon Kind="FolderOpen" Width="12" Height="12"
+                                         Foreground="{Binding $parent[Button].Foreground}" />
+                      </Button>
+                      <Button Classes="icon" ToolTip.Tip="Open Workshop page"
+                              Command="{Binding $parent[UserControl].DataContext.OpenWorkshopPageCommand}"
+                              CommandParameter="{Binding}"
+                              IsVisible="{Binding HasWorkshopLink}">
+                        <mi:MaterialIcon Kind="OpenInNew" Width="12" Height="12"
+                                         Foreground="{Binding $parent[Button].Foreground}" />
+                      </Button>
+                      <Button Classes="icon" ToolTip.Tip="Remove from list"
+                              Command="{Binding $parent[UserControl].DataContext.RemoveItemCommand}"
+                              CommandParameter="{Binding}">
+                        <mi:MaterialIcon Kind="Delete" Width="12" Height="12"
+                                         Foreground="{Binding $parent[Button].Foreground}" />
+                      </Button>
+                    </StackPanel>
+                  </Grid>
+
+                  <!-- Description / change note -->
+                  <Grid Grid.Row="1" Margin="116,10,0,0" ColumnDefinitions="*,*">
+                    <StackPanel Margin="0,0,8,0">
+                      <TextBlock Text="DESCRIPTION" Classes="micro" />
+                      <TextBox Margin="0,5,0,0" MinHeight="58" AcceptsReturn="True" TextWrapping="Wrap"
+                               VerticalContentAlignment="Top"
+                               Text="{Binding Description, Mode=TwoWay}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                      <TextBlock Text="CHANGE NOTE" Classes="micro" />
+                      <TextBox Margin="0,5,0,0" MinHeight="58" AcceptsReturn="True" TextWrapping="Wrap"
+                               VerticalContentAlignment="Top"
+                               Text="{Binding ChangeNote, Mode=TwoWay}" />
+                    </StackPanel>
+                  </Grid>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <!-- Empty state -->
+      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520"
+                  IsVisible="{Binding IsEmpty}">
+        <Border Width="64" Height="64" CornerRadius="20" Background="{StaticResource Brush.AccentSoft}"
+                HorizontalAlignment="Center">
+          <mi:MaterialIcon Kind="CloudUpload" Width="26" Height="26"
+                           Foreground="{StaticResource Brush.Accent}"
+                           HorizontalAlignment="Center" />
+        </Border>
+        <TextBlock Text="Nothing queued for the Workshop" FontSize="18" FontWeight="SemiBold"
+                   HorizontalAlignment="Center" Margin="0,16,0,0" />
+        <TextBlock Text="Add an existing project folder, or feed in a video or image to build a new private wallpaper. Nothing is uploaded until you press Publish."
+                   Classes="pageSubtitle" TextAlignment="Center" Margin="0,8,0,0" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,18,0,0" Spacing="8">
+          <Button Classes="primary" Content="Add project folder…" Command="{Binding AddProjectFolderCommand}" />
+          <Button Classes="secondary" Content="Add video…" Command="{Binding AddVideosCommand}" />
+          <Button Classes="secondary" Content="Add image…" Command="{Binding AddImagesCommand}" />
+        </StackPanel>
+      </StackPanel>
+    </Grid>
+
+    <!-- ============================ SteamCMD log ========================== -->
+    <Border Grid.Row="4" Classes="insetCard" Padding="12,10" Margin="0,10,8,0"
+            IsVisible="{Binding HasLog}">
+      <StackPanel>
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Text="STEAMCMD LOG" Classes="micro" />
+          <TextBlock Grid.Column="1" Text="Newest lines at the bottom" Classes="micro" />
+        </Grid>
+        <ScrollViewer Height="140" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled" Margin="0,6,0,0">
+          <ItemsControl ItemsSource="{Binding Log}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding}" FontFamily="{StaticResource Font.Mono}" FontSize="11"
+                           Foreground="{StaticResource Brush.TextSecondary}" TextWrapping="Wrap" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

@@ -1,0 +1,376 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             x:Class="WallpaperStudio.Views.ApprovalView">
+
+  <Grid>
+    <!-- Empty state -->
+    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="460"
+                IsVisible="{Binding HasItem, Converter={StaticResource InverseBool}}">
+      <Border Width="64" Height="64" CornerRadius="20" Background="{StaticResource Brush.AccentSoft}"
+              HorizontalAlignment="Center">
+        <mi:MaterialIcon Kind="ImageFrame" Width="26" Height="26"
+                         Foreground="{StaticResource Brush.Accent}"
+                         HorizontalAlignment="Center" />
+      </Border>
+      <TextBlock Text="Nothing to review" FontSize="19" FontWeight="SemiBold"
+                 HorizontalAlignment="Center" Margin="0,16,0,0" />
+      <TextBlock Text="Choose a video, scene or workshop wallpaper in the library and select Review frame. You will always see the exact frame before it is exported."
+                 Classes="pageSubtitle" TextAlignment="Center" Margin="0,8,0,0" />
+      <Button Classes="secondary" Content="Back to library" HorizontalAlignment="Center"
+              Margin="0,18,0,0" Command="{Binding BackCommand}" />
+    </StackPanel>
+
+    <Grid IsVisible="{Binding HasItem}" RowDefinitions="Auto,*">
+
+      <!-- Header -->
+      <Grid Grid.Row="0" Margin="0,0,0,16" ColumnDefinitions="Auto,*,Auto">
+        <Button Classes="icon" ToolTip.Tip="Back to library"
+                Command="{Binding BackCommand}" Margin="0,2,12,0" VerticalAlignment="Top">
+          <mi:MaterialIcon Kind="ArrowLeft" Width="12" Height="12"
+                           Foreground="{Binding $parent[Button].Foreground}" />
+        </Button>
+        <StackPanel Grid.Column="1">
+          <TextBlock Text="{Binding Title}" Classes="pageTitle" TextTrimming="CharacterEllipsis"
+                     MaxWidth="640" HorizontalAlignment="Left" />
+          <TextBlock Text="{Binding MetadataSummary}" Classes="pageSubtitle" />
+        </StackPanel>
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+          <Button Classes="ghost" Content="Open source location"
+                  Command="{Binding OpenFileLocationCommand}" />
+          <Button Classes="secondary" Content="Open exports"
+                  Command="{Binding OpenExportFolderCommand}" />
+        </StackPanel>
+      </Grid>
+
+      <!-- Body -->
+      <Grid Grid.Row="1" ColumnDefinitions="*,384">
+
+        <!-- Preview -->
+        <Border Classes="raisedCard" Padding="14" Margin="0,0,16,0">
+          <Grid RowDefinitions="Auto,*,Auto">
+
+            <Grid Margin="2,0,2,12" ColumnDefinitions="*,Auto">
+              <TextBlock Text="EXPORT CANDIDATE" Classes="micro" VerticalAlignment="Center" />
+              <Border Grid.Column="1" Classes="chip"
+                      Background="#1A6C9BFF" BorderBrush="#33FFFFFF">
+                <TextBlock Text="{Binding CandidateSourceLabel}" Classes="chipText"
+                           Foreground="{StaticResource Brush.TextSecondary}" />
+              </Border>
+            </Grid>
+
+            <Border Grid.Row="1" CornerRadius="14" Background="#080B11" MinHeight="380"
+                    BorderBrush="{StaticResource Brush.BorderFaint}" BorderThickness="1">
+              <Grid>
+                <Border CornerRadius="14">
+                  <Border.Background>
+                    <ImageBrush Source="{Binding PreviewImage, Converter={StaticResource JpegImage}}"
+                                Stretch="Uniform" />
+                  </Border.Background>
+                </Border>
+
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="360"
+                            IsVisible="{Binding HasPreview, Converter={StaticResource InverseBool}}">
+                  <mi:MaterialIcon Kind="ImageMultiple" Width="38" Height="38" Foreground="#3DFFFFFF"
+                                   HorizontalAlignment="Center" />
+                  <TextBlock Text="No frame selected" FontSize="15" FontWeight="SemiBold"
+                             HorizontalAlignment="Center" Margin="0,12,0,0"
+                             Foreground="{StaticResource Brush.TextSecondary}" />
+                  <TextBlock Text="Extract a video frame or scene image, or choose an image manually."
+                             Classes="caption" TextAlignment="Center" Margin="0,6,0,0" />
+                </StackPanel>
+
+                <!-- Busy overlay -->
+                <Border Background="#B3070A10" CornerRadius="14" IsVisible="{Binding IsExtracting}">
+                  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Width="280" Spacing="12">
+                    <ProgressBar Classes="slim" IsIndeterminate="True" />
+                    <TextBlock Text="{Binding BusyMessage}" Classes="caption" TextAlignment="Center" />
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </Border>
+
+            <TextBlock Grid.Row="2" Text="{Binding PreviewPathDisplay}" Classes="monoPath"
+                       Margin="2,10,2,0" />
+          </Grid>
+        </Border>
+
+        <!-- Details -->
+        <Border Grid.Column="1" Classes="glassCard" Padding="0">
+          <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Margin="18,16,14,16">
+
+              <!-- Fallback notice -->
+              <Border Classes="insetCard" Padding="13,11" Margin="0,0,0,12"
+                      Background="#1FF5C46B" BorderBrush="#4DF5C46B"
+                      IsVisible="{Binding HasFallbackNotice}">
+                <StackPanel Spacing="7">
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <mi:MaterialIcon Kind="Alert" Width="13" Height="13"
+                                     Foreground="{StaticResource Brush.Warning}" />
+                    <TextBlock Text="Preview / fallback" FontSize="12" FontWeight="SemiBold"
+                               Foreground="{StaticResource Brush.Warning}" />
+                  </StackPanel>
+                  <TextBlock Text="{Binding FallbackNotice}" Classes="caption" Foreground="#F1DDB6" />
+                </StackPanel>
+              </Border>
+
+              <!-- Generic notice -->
+              <Border Classes="insetCard" Padding="13,11" Margin="0,0,0,12"
+                      IsVisible="{Binding HasNotice}">
+                <StackPanel Spacing="7">
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <mi:MaterialIcon Kind="Information" Width="13" Height="13"
+                                     Foreground="{StaticResource Brush.Accent}" />
+                    <TextBlock Text="Heads up" FontSize="12" FontWeight="SemiBold" />
+                  </StackPanel>
+                  <TextBlock Text="{Binding Notice}" Classes="caption" />
+                </StackPanel>
+              </Border>
+
+              <TextBlock Text="SOURCE" Classes="micro" />
+              <Border Classes="insetCard" Padding="11,9" Margin="0,7,0,0">
+                <StackPanel Spacing="7">
+                  <TextBlock Text="{Binding SourcePath}" Classes="monoPath"
+                             TextWrapping="Wrap" TextTrimming="None" />
+                  <TextBlock Text="{Binding ResolutionDetail}" Classes="caption" />
+                </StackPanel>
+              </Border>
+
+              <!-- Video frame picker -->
+              <StackPanel Margin="0,16,0,0" IsVisible="{Binding IsVideo}">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="FRAME TIMESTAMP" Classes="micro" />
+                  <TextBlock Grid.Column="1" Text="{Binding FrameTimestampText}" Classes="micro"
+                             Foreground="{StaticResource Brush.Accent}" />
+                </Grid>
+                <Slider Margin="0,8,0,0"
+                        Minimum="0" Maximum="{Binding MaxTimestamp}"
+                        Value="{Binding FrameTimestamp, Mode=TwoWay}"
+                        IsEnabled="{Binding CanScrub}" />
+                <Grid Margin="0,2,0,0" ColumnDefinitions="*,Auto">
+                  <TextBlock Text="00:00" Classes="micro" />
+                  <TextBlock Grid.Column="1" Text="{Binding DurationText}"
+                             Classes="micro" />
+                </Grid>
+                <Button Classes="secondary" Content="Regenerate frame at this time"
+                        HorizontalAlignment="Left" Margin="0,10,0,0"
+                        Command="{Binding RegenerateCommand}" />
+                <TextBlock Text="FFmpeg not found. Set its folder in Settings to extract video frames."
+                           Classes="caption" Foreground="{StaticResource Brush.Warning}"
+                           Margin="0,7,0,0"
+                           IsVisible="{Binding HasFfmpeg, Converter={StaticResource InverseBool}}" />
+
+                <Border Classes="divider" Margin="0,13,0,0" />
+
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="FIND A BETTER FRAME" Classes="micro" VerticalAlignment="Center" />
+                  <Button Grid.Column="1" Classes="ghost" Content="Sample frames"
+                          HorizontalAlignment="Right" VerticalAlignment="Center"
+                          FontSize="11.5" Padding="9,5"
+                          Command="{Binding ScanFramesCommand}" />
+                </Grid>
+                <TextBlock Text="If the video opens on a fade, logo or black screen, sample it and pick the moment where the artwork is fully visible. The clearest frame is selected for you."
+                           Classes="caption" Margin="0,7,0,0" TextWrapping="Wrap" />
+
+                <ProgressBar Classes="slim" IsIndeterminate="True" Margin="0,9,0,0"
+                             IsVisible="{Binding IsSampling}" />
+
+                <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"
+                              Margin="0,9,0,0"
+                              IsVisible="{Binding HasFrameSamples}">
+                  <ItemsControl ItemsSource="{Binding FrameSamples}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Button Classes="filmstrip" Classes.selected="{Binding IsSelected}"
+                                ToolTip.Tip="{Binding Label}"
+                                Command="{Binding $parent[UserControl].DataContext.PickSampleCommand}"
+                                CommandParameter="{Binding}">
+                          <StackPanel>
+                            <Border Height="44" CornerRadius="8,8,0,0">
+                              <Border.Background>
+                                <ImageBrush Source="{Binding Thumbnail, Converter={StaticResource JpegImage}}"
+                                            Stretch="UniformToFill" />
+                              </Border.Background>
+                            </Border>
+                            <Border Background="#66070A10" CornerRadius="0,0,8,8" Padding="3,2">
+                              <TextBlock Text="{Binding Label}" FontSize="9.5" HorizontalAlignment="Center"
+                                         Foreground="{Binding Tone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}" />
+                            </Border>
+                          </StackPanel>
+                        </Button>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </ScrollViewer>
+                <TextBlock Text="{Binding FrameSamplesSummary}" Classes="micro" Margin="0,5,0,0"
+                           IsVisible="{Binding HasFrameSamples}" />
+              </StackPanel>
+
+              <!-- Scene tools -->
+              <StackPanel Margin="0,16,0,0" IsVisible="{Binding IsScene}">
+                <TextBlock Text="SCENE IMAGE" Classes="micro" />
+                <TextBlock Text="Full-resolution images are decoded from the package's texture files and stacked into one frame. A low-resolution project preview is offered only if extraction is not possible."
+                           Classes="caption" Margin="0,7,0,0" />
+                <Button Classes="secondary" Content="Re-extract scene image"
+                        HorizontalAlignment="Left" Margin="0,10,0,0"
+                        Command="{Binding ScanEmbeddedCommand}" />
+              </StackPanel>
+
+              <!-- Original artwork (reverse image search) -->
+              <Border Classes="divider" />
+
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="ORIGINAL ARTWORK" Classes="micro" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" Text="{Binding ReverseProviderSummary}" Classes="micro"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="200"
+                           ToolTip.Tip="Providers used for reverse image search" />
+              </Grid>
+
+              <!-- Consent prompt -->
+              <Border Classes="insetCard" Padding="13,11" Margin="0,8,0,0"
+                      Background="#1F6C9BFF" BorderBrush="#406C9BFF"
+                      IsVisible="{Binding ReverseConsentMissing}">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="Search the web for this artwork?" FontSize="12" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding ReverseConsentText}" Classes="caption" TextWrapping="Wrap" />
+                  <Button Classes="small" Content="Turn on reverse image search"
+                          HorizontalAlignment="Left" Margin="0,9,0,0"
+                          Command="{Binding EnableReverseSearchCommand}" />
+                </StackPanel>
+              </Border>
+
+              <!-- Enabled but no usable provider -->
+              <Border Classes="insetCard" Padding="13,11" Margin="0,8,0,0"
+                      Background="#1FF5C46B" BorderBrush="#4DF5C46B"
+                      IsVisible="{Binding ReverseNotConfigured}">
+                <StackPanel Spacing="7">
+                  <StackPanel Orientation="Horizontal" Spacing="7">
+                    <mi:MaterialIcon Kind="Alert" Width="13" Height="13"
+                                     Foreground="{StaticResource Brush.Warning}" />
+                    <TextBlock Text="No provider is ready yet" FontSize="12" FontWeight="SemiBold"
+                               Foreground="{StaticResource Brush.Warning}" />
+                  </StackPanel>
+                  <TextBlock Text="Enable trace.moe (no key needed) or add a free SauceNAO / Google Vision API key in Settings, then search again."
+                             Classes="caption" Foreground="#F1DDB6" TextWrapping="Wrap" />
+                </StackPanel>
+              </Border>
+
+              <ProgressBar Classes="slim" IsIndeterminate="True" Margin="0,9,0,0"
+                           IsVisible="{Binding Item.IsReverseSearching}" />
+
+              <TextBlock Text="{Binding Item.ReverseResultsHeader}" FontSize="12" FontWeight="SemiBold"
+                         Margin="0,8,0,0" TextWrapping="Wrap"
+                         Foreground="{Binding Item.ReverseResultsTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}"
+                         IsVisible="{Binding Item.ShowReverseStatus}" />
+
+              <TextBlock Text="{Binding Item.ReverseNote}" Classes="caption" Margin="0,4,0,0"
+                         TextWrapping="Wrap"
+                         IsVisible="{Binding Item.HasReverseNote}" />
+
+              <ItemsControl ItemsSource="{Binding Item.ReverseResults}" Margin="0,8,0,0">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <Border Classes="insetCard" Padding="9" Margin="0,0,0,8">
+                      <Grid ColumnDefinitions="64,*">
+
+                        <Border Width="64" Height="64" CornerRadius="9" Background="#0E141F"
+                                VerticalAlignment="Top">
+                          <Grid>
+                            <Border CornerRadius="9">
+                              <Border.Background>
+                                <ImageBrush Source="{Binding Thumbnail, Converter={StaticResource JpegImage}}"
+                                            Stretch="UniformToFill" />
+                              </Border.Background>
+                            </Border>
+                            <mi:MaterialIcon Kind="ImageOutline" Width="18" Height="18" Foreground="#3DFFFFFF"
+                                             HorizontalAlignment="Center" VerticalAlignment="Center"
+                                             IsVisible="{Binding Thumbnail, Converter={StaticResource IsNull}}" />
+                          </Grid>
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                          <TextBlock Text="{Binding Header}" FontSize="12" FontWeight="SemiBold"
+                                     TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Title}" />
+                          <TextBlock Text="{Binding Subheader}" Classes="micro"
+                                     Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
+
+                          <WrapPanel Margin="0,6,0,0">
+                            <Border Classes="chip" Padding="6,2" Margin="0,0,5,0"
+                                    Background="{Binding SizeTone, Converter={StaticResource ToneBrush}, ConverterParameter=background}"
+                                    BorderBrush="{Binding SizeTone, Converter={StaticResource ToneBrush}, ConverterParameter=border}">
+                              <TextBlock Text="{Binding SizeBadge}" Classes="chipText" FontSize="10"
+                                         Foreground="{Binding SizeTone, Converter={StaticResource ToneBrush}, ConverterParameter=foreground}" />
+                            </Border>
+                            <Border Classes="chip" Padding="6,2" Margin="0,0,5,0"
+                                    Background="#14FFFFFF" BorderBrush="#26FFFFFF">
+                              <TextBlock Text="{Binding ResolutionText}" Classes="chipText" FontSize="10"
+                                         Foreground="{StaticResource Brush.TextSecondary}" />
+                            </Border>
+                            <Border Classes="chip" Padding="6,2"
+                                    Background="#14FFFFFF" BorderBrush="#26FFFFFF">
+                              <TextBlock Text="{Binding SimilarityText}" Classes="chipText" FontSize="10"
+                                         Foreground="{StaticResource Brush.TextPrimary}" />
+                            </Border>
+                          </WrapPanel>
+
+                          <StackPanel Orientation="Horizontal" Margin="0,8,0,0" Spacing="6">
+                            <Button Classes="small" Content="Open page" FontSize="11" Padding="8,4"
+                                    Command="{Binding $parent[UserControl].DataContext.OpenResultCommand}"
+                                    CommandParameter="{Binding}"
+                                    IsVisible="{Binding HasPage}" />
+                            <Button Classes="small" Content="Use image" FontSize="11" Padding="8,4"
+                                    ToolTip.Tip="Download this image and make it the export candidate"
+                                    Command="{Binding $parent[UserControl].DataContext.UseResultCommand}"
+                                    CommandParameter="{Binding}"
+                                    IsVisible="{Binding CanUseImage}" />
+                          </StackPanel>
+                        </StackPanel>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <Button Classes="small" Content="Search again" HorizontalAlignment="Left"
+                      Margin="0,2,0,0"
+                      Command="{Binding SearchOriginalCommand}"
+                      IsVisible="{Binding ReverseReady}" />
+
+              <TextBlock Text="Only a 1280-pixel copy of this frame is uploaded. Nothing is downloaded unless you choose a match, and every result stays a suggestion until you approve it."
+                         Classes="micro" Margin="0,9,0,0" TextWrapping="Wrap" />
+
+              <Border Classes="divider" />
+
+              <!-- Actions -->
+              <StackPanel>
+                <TextBlock Text="DECISION" Classes="micro" Margin="0,0,0,4" />
+                <TextBlock Text="{Binding ApprovalStatusLabel}" Classes="caption" Margin="0,0,0,10"
+                           IsVisible="{Binding NeedsDecision}" />
+                <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding NeedsDecision}">
+                  <Button Classes="primary" Content="Approve this frame"
+                          Command="{Binding ApproveCommand}" HorizontalContentAlignment="Center" />
+                  <Button Grid.Column="1" Classes="danger" Content="Toss"
+                          Margin="8,0,0,0" Command="{Binding TossCommand}" />
+                </Grid>
+                <TextBlock Text="This image is already usable, so there is nothing to approve. Choosing a match below replaces the candidate and asks you to confirm it first."
+                           Classes="caption" TextWrapping="Wrap" Margin="0,0,0,10"
+                           IsVisible="{Binding NeedsDecision, Converter={StaticResource InverseBool}}" />
+                <Button Classes="secondary" Content="Choose a different image…"
+                        Margin="0,8,0,0" Command="{Binding ChooseImageCommand}" />
+                <TextBlock Text="Approved frames are exported as high-quality JPEGs. Videos and scenes are never exported without this step."
+                           Classes="micro" Margin="0,10,0,0"
+                           IsVisible="{Binding NeedsDecision}" />
+              </StackPanel>
+            </StackPanel>
+          </ScrollViewer>
+        </Border>
+      </Grid>
+    </Grid>
+  </Grid>
+</UserControl>

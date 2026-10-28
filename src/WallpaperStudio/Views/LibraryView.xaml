@@ -213,7 +213,7 @@
                                         <Grid>
                                             <Border CornerRadius="12">
                                                 <Border.Background>
-                                                    <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                                    <ImageBrush ImageSource="{Binding Thumbnail, Converter={StaticResource JpegImage}}" Stretch="UniformToFill" />
                                                 </Border.Background>
                                             </Border>
                                             <TextBlock Text="{Binding KindGlyph}" FontFamily="{StaticResource Font.Icon}"

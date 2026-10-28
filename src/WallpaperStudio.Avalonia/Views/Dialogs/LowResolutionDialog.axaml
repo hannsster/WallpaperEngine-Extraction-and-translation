@@ -1,0 +1,81 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+        x:Class="WallpaperStudio.Views.Dialogs.LowResolutionDialog"
+        Title="Low resolution image"
+        Width="600"
+        SizeToContent="Height"
+        CanResize="False"
+        ShowInTaskbar="False"
+        SystemDecorations="None"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        WindowStartupLocation="CenterOwner">
+
+  <Border Margin="20" CornerRadius="20" Background="#F7141B28"
+          BorderBrush="{StaticResource Brush.BorderStrong}" BorderThickness="1"
+          BoxShadow="0 12 40 0 #73000000">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+
+      <!-- Header (drag area) -->
+      <Grid Grid.Row="0" Margin="20,16,12,0"
+            ColumnDefinitions="*,Auto" PointerPressed="Header_PointerPressed">
+        <StackPanel Orientation="Horizontal">
+          <Border Width="30" Height="30" CornerRadius="9" Background="#26F5C46B">
+            <mi:MaterialIcon Kind="Alert" Width="15" Height="15"
+                             Foreground="{StaticResource Brush.Warning}"
+                             HorizontalAlignment="Center" />
+          </Border>
+          <StackPanel Margin="11,0,0,0" VerticalAlignment="Center" Spacing="2">
+            <TextBlock Text="Below the 1080p rule" FontSize="15" FontWeight="SemiBold" />
+            <TextBlock Text="Approve anyway or toss this image" Classes="micro" />
+          </StackPanel>
+        </StackPanel>
+        <Button Grid.Column="1" Classes="icon" ToolTip.Tip="Cancel batch" Click="CancelButton_Click">
+          <mi:MaterialIcon Kind="Close" Width="12" Height="12"
+                           Foreground="{Binding $parent[Button].Foreground}" />
+        </Button>
+      </Grid>
+
+      <!-- Preview -->
+      <Border Grid.Row="1" Margin="20,16,20,0" Height="190" CornerRadius="12" Background="#080B11">
+        <Grid>
+          <Border CornerRadius="12">
+            <Border.Background>
+              <ImageBrush Source="{Binding Thumbnail, Converter={StaticResource JpegImage}}"
+                          Stretch="Uniform" />
+            </Border.Background>
+          </Border>
+          <mi:MaterialIcon Kind="ImageFrame" Width="30" Height="30" Foreground="#33FFFFFF"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"
+                           IsVisible="{Binding HasThumbnail, Converter={StaticResource InverseBool}}" />
+          <Border Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10"
+                  Background="#B3070A10" BorderBrush="#26FFFFFF">
+            <TextBlock Text="{Binding ResolutionText}" Classes="chipText"
+                       Foreground="#D7E1F2" FontFamily="{StaticResource Font.Mono}" />
+          </Border>
+        </Grid>
+      </Border>
+
+      <!-- Explanation -->
+      <StackPanel Grid.Row="2" Margin="20,16,20,0" Spacing="6">
+        <TextBlock Text="{Binding FileName}" Classes="cardTitle" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding RuleText}" Classes="caption" />
+        <Border Classes="insetCard" Padding="11,9" Margin="0,5,0,0">
+          <TextBlock Text="Approving keeps the original resolution. Wallpaper Studio never upscales, and the queue still marks this image as low-resolution so you can spot it later."
+                     Classes="micro" TextWrapping="Wrap" />
+        </Border>
+      </StackPanel>
+
+      <!-- Actions -->
+      <Grid Grid.Row="3" Margin="20,16,20,18" ColumnDefinitions="*,Auto,Auto">
+        <Button Classes="ghost" Content="Cancel batch" HorizontalAlignment="Left"
+                Click="CancelButton_Click" />
+        <Button Grid.Column="1" Classes="danger" Content="Toss image" Margin="0,0,8,0"
+                Click="TossButton_Click" />
+        <Button Grid.Column="2" Classes="primary" Content="Approve anyway"
+                Click="ApproveButton_Click" />
+      </Grid>
+    </Grid>
+  </Border>
+</Window>

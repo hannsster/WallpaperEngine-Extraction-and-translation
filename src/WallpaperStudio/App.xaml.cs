@@ -17,6 +17,10 @@ public partial class App : Application
         AppPaths.Initialize();
         Logger.Initialize();
 
+        UiThread.Initialize(
+            action => Current.Dispatcher.InvokeAsync(action).Task,
+            () => Current.Dispatcher.CheckAccess());
+
         DispatcherUnhandledException += OnDispatcherUnhandledException;
         TaskScheduler.UnobservedTaskException += (_, args) =>
         {
@@ -65,7 +69,7 @@ public partial class App : Application
         var steamCmd = new SteamCmdService();
         steamCmd.Locate(_settings.Current, out _);
         var projectBuilder = new WallpaperProjectBuilder(ffmpeg);
-        var dialogs = new DialogService();
+        var dialogs = new WpfDialogService();
         var shell = new ShellState();
 
         var library = new LibraryViewModel(

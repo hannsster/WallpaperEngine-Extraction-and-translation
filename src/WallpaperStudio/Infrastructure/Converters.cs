@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace WallpaperStudio.Infrastructure;
 
@@ -130,6 +131,41 @@ public sealed class TubeTimeConverter : IValueConverter
         return time.TotalHours >= 1
             ? time.ToString(@"h\:mm\:ss", CultureInfo.InvariantCulture)
             : time.ToString(@"m\:ss", CultureInfo.InvariantCulture);
+    }
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
+        => Binding.DoNothing;
+}
+
+/// <summary>
+/// Decodes the JPEG bytes a view model exposes into a frozen bitmap the UI can
+/// bind to. Thumbnails are already cached as small JPEGs by the core service.
+/// </summary>
+public sealed class JpegImageConverter : IValueConverter
+{
+    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    {
+        if (value is not byte[] { Length: > 0 } bytes)
+        {
+            return null;
+        }
+
+        try
+        {
+            using var stream = new MemoryStream(bytes, writable: false);
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad;
+            bitmap.CreateOptions = BitmapCreateOptions.IgnoreColorProfile;
+            bitmap.StreamSource = stream;
+            bitmap.EndInit();
+            bitmap.Freeze();
+            return bitmap;
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

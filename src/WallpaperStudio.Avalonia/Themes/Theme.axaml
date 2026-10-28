@@ -1,0 +1,563 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mi="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia">
+
+  <Styles.Resources>
+    <!-- ============================== Palette ============================== -->
+    <Color x:Key="Color.TextPrimary">#F3F6FC</Color>
+    <Color x:Key="Color.TextSecondary">#A6B3C9</Color>
+    <Color x:Key="Color.TextTertiary">#718199</Color>
+    <Color x:Key="Color.Accent">#6C9BFF</Color>
+    <Color x:Key="Color.Success">#63D6A6</Color>
+    <Color x:Key="Color.Warning">#F5C46B</Color>
+    <Color x:Key="Color.Danger">#FF8095</Color>
+
+    <SolidColorBrush x:Key="Brush.TextPrimary" Color="{StaticResource Color.TextPrimary}" />
+    <SolidColorBrush x:Key="Brush.TextSecondary" Color="{StaticResource Color.TextSecondary}" />
+    <SolidColorBrush x:Key="Brush.TextTertiary" Color="{StaticResource Color.TextTertiary}" />
+    <SolidColorBrush x:Key="Brush.Accent" Color="{StaticResource Color.Accent}" />
+    <SolidColorBrush x:Key="Brush.Success" Color="{StaticResource Color.Success}" />
+    <SolidColorBrush x:Key="Brush.Warning" Color="{StaticResource Color.Warning}" />
+    <SolidColorBrush x:Key="Brush.Danger" Color="{StaticResource Color.Danger}" />
+
+    <SolidColorBrush x:Key="Brush.Surface" Color="#B8141B28" />
+    <SolidColorBrush x:Key="Brush.SurfaceStrong" Color="#E0141B28" />
+    <SolidColorBrush x:Key="Brush.SurfaceHover" Color="#E01C2536" />
+    <SolidColorBrush x:Key="Brush.SurfaceInset" Color="#66090D15" />
+    <SolidColorBrush x:Key="Brush.BorderSoft" Color="#1FFFFFFF" />
+    <SolidColorBrush x:Key="Brush.BorderStrong" Color="#33FFFFFF" />
+    <SolidColorBrush x:Key="Brush.BorderFaint" Color="#12FFFFFF" />
+    <SolidColorBrush x:Key="Brush.AccentSoft" Color="#2E6C9BFF" />
+    <SolidColorBrush x:Key="Brush.Overlay" Color="#B3070A10" />
+
+    <LinearGradientBrush x:Key="Brush.AccentGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Color="#7FA9FF" Offset="0" />
+      <GradientStop Color="#4F7BE8" Offset="1" />
+    </LinearGradientBrush>
+
+    <LinearGradientBrush x:Key="Brush.WindowBackground" StartPoint="0%,0%" EndPoint="100%,100%">
+      <GradientStop Color="#080B11" Offset="0" />
+      <GradientStop Color="#0D1422" Offset="0.46" />
+      <GradientStop Color="#101A2C" Offset="0.74" />
+      <GradientStop Color="#080B12" Offset="1" />
+    </LinearGradientBrush>
+
+    <RadialGradientBrush x:Key="Brush.AmbientGlow" Center="20%,0%" GradientOrigin="20%,0%" RadiusX="90%" RadiusY="85%">
+      <GradientStop Color="#3D5B8DEF" Offset="0" />
+      <GradientStop Color="#125B8DEF" Offset="0.5" />
+      <GradientStop Color="#00000000" Offset="1" />
+    </RadialGradientBrush>
+
+    <RadialGradientBrush x:Key="Brush.AmbientGlowWarm" Center="92%,100%" GradientOrigin="92%,100%" RadiusX="70%" RadiusY="70%">
+      <GradientStop Color="#1FA86BFF" Offset="0" />
+      <GradientStop Color="#00000000" Offset="1" />
+    </RadialGradientBrush>
+
+    <!-- ============================ Typography =========================== -->
+    <FontFamily x:Key="Font.Ui">Inter</FontFamily>
+    <FontFamily x:Key="Font.Display">Inter</FontFamily>
+    <FontFamily x:Key="Font.Mono">Cascadia Mono, Consolas, DejaVu Sans Mono, monospace</FontFamily>
+
+    <!-- ========================= Fluent overrides ======================== -->
+    <SolidColorBrush x:Key="SliderTrackValueFill" Color="{StaticResource Color.Accent}" />
+    <SolidColorBrush x:Key="SliderTrackValueFillPointerOver" Color="#7FA9FF" />
+    <SolidColorBrush x:Key="SliderTrackValueFillPressed" Color="#7FA9FF" />
+    <SolidColorBrush x:Key="SliderTrackFill" Color="#26FFFFFF" />
+    <SolidColorBrush x:Key="SliderTrackFillPointerOver" Color="#33FFFFFF" />
+    <SolidColorBrush x:Key="SliderThumbBackground" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="SliderThumbBackgroundPointerOver" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="SliderThumbBackgroundPressed" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="ProgressBarForeground" Color="{StaticResource Color.Accent}" />
+    <SolidColorBrush x:Key="ProgressBarBackground" Color="#1FFFFFFF" />
+  </Styles.Resources>
+
+  <!-- ============================== Window ============================== -->
+  <Style Selector="Window">
+    <Setter Property="FontFamily" Value="{StaticResource Font.Ui}" />
+    <Setter Property="FontSize" Value="13.5" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+  </Style>
+
+  <Style Selector="TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource Font.Ui}" />
+  </Style>
+
+  <Style Selector="TextBlock.pageTitle">
+    <Setter Property="FontFamily" Value="{StaticResource Font.Display}" />
+    <Setter Property="FontSize" Value="28" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+  </Style>
+
+  <Style Selector="TextBlock.pageSubtitle">
+    <Setter Property="FontSize" Value="13.5" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Margin" Value="0,6,0,0" />
+  </Style>
+
+  <Style Selector="TextBlock.sectionTitle">
+    <Setter Property="FontFamily" Value="{StaticResource Font.Display}" />
+    <Setter Property="FontSize" Value="15.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+  </Style>
+
+  <Style Selector="TextBlock.cardTitle">
+    <Setter Property="FontSize" Value="14.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+
+  <Style Selector="TextBlock.caption">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <Style Selector="TextBlock.micro">
+    <Setter Property="FontSize" Value="11" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextTertiary}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <Style Selector="TextBlock.monoPath">
+    <Setter Property="FontFamily" Value="{StaticResource Font.Mono}" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextTertiary}" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    <Setter Property="ToolTip.Tip" Value="{Binding $self.Text}" />
+  </Style>
+
+  <Style Selector="TextBlock.chipText">
+    <Setter Property="FontSize" Value="10.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- ============================== Cards =============================== -->
+  <Style Selector="Border.glassCard">
+    <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderSoft}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="18" />
+  </Style>
+
+  <Style Selector="Border.raisedCard">
+    <Setter Property="Background" Value="{StaticResource Brush.Surface}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderSoft}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="18" />
+    <Setter Property="BoxShadow" Value="0 10 30 0 #57000000" />
+  </Style>
+
+  <Style Selector="Border.insetCard">
+    <Setter Property="Background" Value="{StaticResource Brush.SurfaceInset}" />
+    <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderFaint}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+  </Style>
+
+  <Style Selector="Border.chip">
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Padding" Value="9,3" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="Border.divider">
+    <Setter Property="Height" Value="1" />
+    <Setter Property="Background" Value="{StaticResource Brush.BorderFaint}" />
+    <Setter Property="Margin" Value="0,14" />
+  </Style>
+
+  <Style Selector="Ellipse.statusDot">
+    <Setter Property="Width" Value="7" />
+    <Setter Property="Height" Value="7" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="mi|MaterialIcon">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- ============================== Buttons ============================= -->
+  <Style Selector="Button">
+    <Setter Property="FontFamily" Value="{StaticResource Font.Ui}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+    <Setter Property="Background" Value="#14FFFFFF" />
+    <Setter Property="BorderBrush" Value="#2BFFFFFF" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="15,9" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="PART_Root"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="11"
+                Padding="{TemplateBinding Padding}">
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                            Foreground="{TemplateBinding Foreground}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button:pointerover /template/ Border#PART_Root">
+    <Setter Property="Opacity" Value="0.86" />
+  </Style>
+
+  <Style Selector="Button:pressed /template/ Border#PART_Root">
+    <Setter Property="Opacity" Value="0.7" />
+    <Setter Property="RenderTransform" Value="scale(0.985)" />
+    <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+  </Style>
+
+  <Style Selector="Button:disabled /template/ Border#PART_Root">
+    <Setter Property="Opacity" Value="0.36" />
+  </Style>
+
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{StaticResource Brush.AccentGradient}" />
+    <Setter Property="BorderBrush" Value="#66FFFFFF" />
+    <Setter Property="Foreground" Value="#FFFFFFFF" />
+  </Style>
+
+  <Style Selector="Button.primary /template/ Border#PART_Root">
+    <Setter Property="BoxShadow" Value="0 0 34 0 #524F7BE8" />
+  </Style>
+
+  <Style Selector="Button.secondary">
+    <Setter Property="Background" Value="#14FFFFFF" />
+    <Setter Property="BorderBrush" Value="#2BFFFFFF" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+  </Style>
+
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
+    <Setter Property="FontWeight" Value="Normal" />
+  </Style>
+
+  <Style Selector="Button.danger">
+    <Setter Property="Background" Value="#1FFF6B81" />
+    <Setter Property="BorderBrush" Value="#40FF8095" />
+    <Setter Property="Foreground" Value="#FFB3C0" />
+  </Style>
+
+  <Style Selector="Button.small">
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Padding" Value="11,6" />
+  </Style>
+
+  <Style Selector="Button.icon">
+    <Setter Property="Width" Value="32" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="PART_Root" Background="{TemplateBinding Background}" CornerRadius="8">
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.icon:pointerover /template/ Border#PART_Root">
+    <Setter Property="Background" Value="#1FFFFFFF" />
+  </Style>
+
+  <Style Selector="Button.icon:pointerover">
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+  </Style>
+
+  <Style Selector="Button.icon:pressed /template/ Border#PART_Root">
+    <Setter Property="Background" Value="#33FFFFFF" />
+  </Style>
+
+  <Style Selector="Button.icon:disabled /template/ Border#PART_Root">
+    <Setter Property="Opacity" Value="0.35" />
+  </Style>
+
+  <Style Selector="Button.closeIcon">
+    <Setter Property="Width" Value="32" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="PART_Root" Background="{TemplateBinding Background}" CornerRadius="8">
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.closeIcon:pointerover /template/ Border#PART_Root">
+    <Setter Property="Background" Value="#E6E81123" />
+  </Style>
+
+  <Style Selector="Button.closeIcon:pointerover">
+    <Setter Property="Foreground" Value="#FFFFFFFF" />
+  </Style>
+
+  <Style Selector="Button.closeIcon:pressed /template/ Border#PART_Root">
+    <Setter Property="Background" Value="#CCB10E1B" />
+  </Style>
+
+  <!-- Navigation pill -->
+  <Style Selector="RadioButton.navItem">
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="FontSize" Value="13.5" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Margin" Value="0,2" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="PART_Root" Background="{TemplateBinding Background}" CornerRadius="11" Padding="11,9">
+          <Grid ColumnDefinitions="3,*">
+            <Border Name="PART_Bar" Width="3" Height="16" CornerRadius="2"
+                    Background="Transparent" VerticalAlignment="Center" />
+            <ContentPresenter Grid.Column="1"
+                              Content="{TemplateBinding Content}"
+                              VerticalAlignment="Center"
+                              Foreground="{TemplateBinding Foreground}" />
+          </Grid>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="RadioButton.navItem:pointerover /template/ Border#PART_Root">
+    <Setter Property="Background" Value="#12FFFFFF" />
+  </Style>
+
+  <Style Selector="RadioButton.navItem:checked /template/ Border#PART_Root">
+    <Setter Property="Background" Value="{StaticResource Brush.AccentSoft}" />
+  </Style>
+
+  <Style Selector="RadioButton.navItem:checked /template/ Border#PART_Bar">
+    <Setter Property="Background" Value="{StaticResource Brush.Accent}" />
+  </Style>
+
+  <Style Selector="RadioButton.navItem:checked">
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+  </Style>
+
+  <!-- Filter pill -->
+  <Style Selector="RadioButton.filterPill">
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextSecondary}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderSoft}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Margin" Value="0,0,8,0" />
+    <Setter Property="Padding" Value="12,6" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="PART_Root" CornerRadius="9" Padding="{TemplateBinding Padding}"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1">
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            Foreground="{TemplateBinding Foreground}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="RadioButton.filterPill:pointerover /template/ Border#PART_Root">
+    <Setter Property="Background" Value="#12FFFFFF" />
+  </Style>
+
+  <Style Selector="RadioButton.filterPill:checked /template/ Border#PART_Root">
+    <Setter Property="Background" Value="{StaticResource Brush.AccentSoft}" />
+    <Setter Property="BorderBrush" Value="#666C9BFF" />
+  </Style>
+
+  <Style Selector="RadioButton.filterPill:checked">
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+  </Style>
+
+  <!-- Filmstrip frame -->
+  <Style Selector="Button.filmstrip">
+    <Setter Property="Width" Value="78" />
+    <Setter Property="Margin" Value="0,0,8,0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="PART_Root" CornerRadius="10" Background="#0E141F"
+                BorderBrush="#24FFFFFF" BorderThickness="1.5">
+          <ContentPresenter Content="{TemplateBinding Content}"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.filmstrip:pointerover /template/ Border#PART_Root">
+    <Setter Property="BorderBrush" Value="#66FFFFFF" />
+  </Style>
+
+  <Style Selector="Button.filmstrip.selected /template/ Border#PART_Root">
+    <Setter Property="BorderBrush" Value="{StaticResource Brush.Accent}" />
+    <Setter Property="Background" Value="#1F6C9BFF" />
+  </Style>
+
+  <!-- ============================== Inputs ============================== -->
+  <Style Selector="TextBox">
+    <Setter Property="FontFamily" Value="{StaticResource Font.Ui}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+    <Setter Property="Background" Value="#10FFFFFF" />
+    <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderSoft}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="12,9" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="CaretBrush" Value="{StaticResource Brush.Accent}" />
+    <Setter Property="SelectionBrush" Value="{StaticResource Brush.Accent}" />
+    <Setter Property="SelectionForegroundBrush" Value="#FFFFFFFF" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+
+  <Style Selector="TextBox:pointerover">
+    <Setter Property="Background" Value="#16FFFFFF" />
+  </Style>
+
+  <Style Selector="TextBox:focus">
+    <Setter Property="Background" Value="#18FFFFFF" />
+    <Setter Property="BorderBrush" Value="{StaticResource Brush.Accent}" />
+  </Style>
+
+  <!-- Toggle switch -->
+  <Style Selector="CheckBox.switch">
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid Background="Transparent" ColumnDefinitions="Auto,*">
+          <Grid Width="42" Height="24" VerticalAlignment="Center">
+            <Border Name="PART_Track" CornerRadius="12" Background="#26FFFFFF"
+                    BorderBrush="#1FFFFFFF" BorderThickness="1" />
+            <Ellipse Name="PART_Thumb" Width="18" Height="18" Fill="#C9D4E6"
+                     HorizontalAlignment="Left" Margin="3,0" />
+          </Grid>
+          <ContentPresenter Grid.Column="1" Margin="11,0,0,0" VerticalAlignment="Center"
+                            Content="{TemplateBinding Content}"
+                            Foreground="{TemplateBinding Foreground}" />
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="CheckBox.switch:checked /template/ Border#PART_Track">
+    <Setter Property="Background" Value="{StaticResource Brush.AccentGradient}" />
+    <Setter Property="BorderBrush" Value="#66FFFFFF" />
+  </Style>
+
+  <Style Selector="CheckBox.switch:checked /template/ Ellipse#PART_Thumb">
+    <Setter Property="Fill" Value="#FFFFFF" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="Margin" Value="0,0,3,0" />
+  </Style>
+
+  <Style Selector="CheckBox.switch:pointerover /template/ Border#PART_Track">
+    <Setter Property="Opacity" Value="0.88" />
+  </Style>
+
+  <Style Selector="CheckBox.switch:disabled /template/ Border#PART_Track">
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
+
+  <Style Selector="CheckBox.switch:disabled">
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextTertiary}" />
+  </Style>
+
+  <!-- Slider and ComboBox keep Fluent behaviour with our palette. -->
+  <Style Selector="Slider">
+    <Setter Property="Height" Value="28" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+
+  <Style Selector="ComboBox">
+    <Setter Property="FontFamily" Value="{StaticResource Font.Ui}" />
+    <Setter Property="FontSize" Value="12.5" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+    <Setter Property="Background" Value="#10FFFFFF" />
+    <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderSoft}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="11,7" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="Cursor" Value="Hand" />
+  </Style>
+
+  <Style Selector="ComboBox:pointerover">
+    <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
+  </Style>
+
+  <Style Selector="ComboBoxItem">
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="CornerRadius" Value="7" />
+  </Style>
+
+  <!-- =========================== Progress/Scroll ======================== -->
+  <Style Selector="ProgressBar.slim">
+    <Setter Property="Height" Value="5" />
+    <Setter Property="MinHeight" Value="3" />
+    <Setter Property="Background" Value="#1FFFFFFF" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.AccentGradient}" />
+    <Setter Property="CornerRadius" Value="3" />
+  </Style>
+
+  <!-- ============================== Misc ================================ -->
+  <Style Selector="ToolTip">
+    <Setter Property="Background" Value="#F21A2231" />
+    <Setter Property="BorderBrush" Value="{StaticResource Brush.BorderStrong}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="8" />
+    <Setter Property="Foreground" Value="{StaticResource Brush.TextPrimary}" />
+    <Setter Property="FontFamily" Value="{StaticResource Font.Ui}" />
+    <Setter Property="FontSize" Value="12" />
+    <Setter Property="Padding" Value="10,7" />
+  </Style>
+
+</Styles>

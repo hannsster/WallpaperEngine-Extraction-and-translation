@@ -47,7 +47,7 @@
                 <Grid>
                     <Border CornerRadius="12">
                         <Border.Background>
-                            <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="Uniform" />
+                            <ImageBrush ImageSource="{Binding Thumbnail, Converter={StaticResource JpegImage}}" Stretch="Uniform" />
                         </Border.Background>
                     </Border>
                     <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource Font.Icon}" FontSize="30"

@@ -161,7 +161,7 @@
                                         <Grid>
                                             <Border CornerRadius="9">
                                                 <Border.Background>
-                                                    <ImageBrush ImageSource="{Binding Thumbnail}" Stretch="UniformToFill" />
+                                                    <ImageBrush ImageSource="{Binding Thumbnail, Converter={StaticResource JpegImage}}" Stretch="UniformToFill" />
                                                 </Border.Background>
                                             </Border>
                                             <TextBlock Text="&#xE7F4;" FontFamily="{StaticResource Font.Icon}" FontSize="18"
