@@ -372,7 +372,7 @@
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                     <TextBlock Text="&#xE8B7;" FontFamily="{StaticResource Font.Icon}" FontSize="15"
                                                Foreground="{StaticResource Brush.Accent}" VerticalAlignment="Center" />
-                                    <TextBlock Text="Portable storage" Style="{StaticResource SectionTitle}" Margin="9,0,0,0" />
+                                    <TextBlock Text="Storage" Style="{StaticResource SectionTitle}" Margin="9,0,0,0" />
                                 </StackPanel>
 
                                 <Border Style="{StaticResource Chip}" HorizontalAlignment="Left"
@@ -384,6 +384,8 @@
 
                                 <TextBlock Text="DATA FOLDER" Style="{StaticResource Micro}" Margin="0,12,0,0" />
                                 <TextBlock Text="{Binding DataDirectory}" Style="{StaticResource MonoPath}" Margin="0,4,0,0" TextWrapping="Wrap" TextTrimming="None" />
+                                <TextBlock Text="{Binding MigrationNote}" Style="{StaticResource Micro}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                           Visibility="{Binding HasMigrationNote, Converter={StaticResource BoolToVisibility}}" />
                                 <TextBlock Text="STATE FILE" Style="{StaticResource Micro}" Margin="0,10,0,0" />
                                 <TextBlock Text="{Binding StateFile}" Style="{StaticResource MonoPath}" Margin="0,4,0,0" TextWrapping="Wrap" TextTrimming="None" />
                                 <TextBlock Text="{Binding StateRecordCount, StringFormat={}{0:N0} remembered sources}" Style="{StaticResource Micro}" Margin="0,4,0,0" />

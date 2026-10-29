@@ -368,6 +368,8 @@ public sealed class LibraryViewModel : ObservableObject
             return;
         }
 
+        source.SceneComposition = record.SceneComposition;
+
         var matches = record.Matches(source.FileHash, source.LastModified);
         if (matches &&
             record.ExportStatus == ExportStatus.Exported &&

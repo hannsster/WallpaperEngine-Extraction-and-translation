@@ -238,6 +238,21 @@
                                 <TextBlock Text="SCENE IMAGE" Style="{StaticResource Micro}" />
                                 <TextBlock Text="Full-resolution images are decoded from the package's texture files and stacked into one frame. A low-resolution project preview is offered only if extraction is not possible."
                                            Style="{StaticResource Caption}" Margin="0,7,0,0" />
+                                <Grid Margin="0,11,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Frame composition" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                                    <ComboBox Grid.Column="1" Style="{StaticResource ModernComboBox}"
+                                              ItemContainerStyle="{StaticResource ModernComboBoxItem}"
+                                              Margin="10,0,0,0" MinWidth="180" HorizontalAlignment="Left"
+                                              ItemsSource="{Binding SceneCompositionOptions}"
+                                              SelectedItem="{Binding SelectedSceneComposition, Mode=TwoWay}"
+                                              DisplayMemberPath="Label" />
+                                </Grid>
+                                <TextBlock Text="{Binding SceneCompositionDescription}" Style="{StaticResource Caption}"
+                                           Margin="0,6,0,0" TextWrapping="Wrap" />
                                 <Button Style="{StaticResource SecondaryButton}" Content="Re-extract scene image"
                                         HorizontalAlignment="Left" Margin="0,10,0,0"
                                         Command="{Binding ScanEmbeddedCommand}" />

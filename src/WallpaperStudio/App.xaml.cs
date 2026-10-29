@@ -16,6 +16,7 @@ public partial class App : Application
 
         AppPaths.Initialize();
         Logger.Initialize();
+        WindowsUnblock.Cleanup();
 
         UiThread.Initialize(
             action => Current.Dispatcher.InvokeAsync(action).Task,

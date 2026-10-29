@@ -24,6 +24,7 @@ public sealed class WallpaperSource : ObservableObject
     private string? _errorMessage;
     private string? _candidateFramePath;
     private double _candidateFrameTime;
+    private SceneComposition _sceneComposition;
     private bool _usesPreviewFallback;
     private bool _isThumbnailLoading;
     private byte[]? _thumbnail;
@@ -373,6 +374,26 @@ public sealed class WallpaperSource : ObservableObject
             }
         }
     }
+
+    /// <summary>Which layers are baked into the static frame for a scene project.</summary>
+    public SceneComposition SceneComposition
+    {
+        get => _sceneComposition;
+        set
+        {
+            if (SetProperty(ref _sceneComposition, value))
+            {
+                OnPropertyChanged(nameof(SceneCompositionLabel));
+            }
+        }
+    }
+
+    public string SceneCompositionLabel => SceneComposition switch
+    {
+        WallpaperStudio.Models.SceneComposition.Full => "Everything",
+        WallpaperStudio.Models.SceneComposition.Background => "Background only",
+        _ => "Balanced"
+    };
 
     public bool UsesPreviewFallback
     {

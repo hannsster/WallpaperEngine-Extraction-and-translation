@@ -528,9 +528,15 @@ public sealed class SettingsViewModel : ObservableObject
 
     public string PortableModeText => AppPaths.PortableMode
         ? "Portable · data is stored next to the executable"
-        : "Fallback · the app folder is read-only, so data lives in %LOCALAPPDATA%";
+        : "User profile · settings and approval memory survive updates";
 
-    public string PortableTone => AppPaths.PortableMode ? "success" : "warning";
+    public string PortableTone => "success";
+
+    public bool HasMigrationNote => AppPaths.MigratedFrom is not null;
+
+    public string MigrationNote => AppPaths.MigratedFrom is null
+        ? string.Empty
+        : $"Imported {string.Join(", ", AppPaths.MigratedItems)} from the previous install at {AppPaths.MigratedFrom}. The old folder was left untouched.";
 
     public int StateRecordCount => _state.RecordCount;
 

@@ -117,6 +117,7 @@ public sealed class StateStore
             record.SourceType = source.SourceTypeLabel;
             record.Resolution = source.Resolution.Display;
             record.FrameTimestampSeconds = source.CandidateFrameTime;
+            record.SceneComposition = source.SceneComposition;
             record.UsesPreviewFallback = source.UsesPreviewFallback;
             if (clearExportStatus)
             {
@@ -148,6 +149,7 @@ public sealed class StateStore
             record.ExportStatus = source.ExportStatus;
             record.ApprovalStatus = source.ApprovalStatus;
             record.FrameTimestampSeconds = source.CandidateFrameTime;
+            record.SceneComposition = source.SceneComposition;
             record.UsesPreviewFallback = source.UsesPreviewFallback;
             record.Title = source.Title;
             if (save)

@@ -12,6 +12,7 @@ public sealed class ExportRecord
     public ExportStatus ExportStatus { get; set; }
     public ApprovalStatus ApprovalStatus { get; set; }
     public double FrameTimestampSeconds { get; set; }
+    public SceneComposition SceneComposition { get; set; }
     public bool UsesPreviewFallback { get; set; }
     public string Title { get; set; } = string.Empty;
 

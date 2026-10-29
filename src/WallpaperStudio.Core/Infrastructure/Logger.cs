@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 using System.Text;
 
 namespace WallpaperStudio.Infrastructure;
@@ -17,7 +18,8 @@ public static class Logger
         {
             Directory.CreateDirectory(AppPaths.LogDirectory);
             _logFilePath = Path.Combine(AppPaths.LogDirectory, $"wallpaper-studio-{DateTime.Now:yyyyMMdd}.log");
-            Info($"Application started. Version={typeof(Logger).Assembly.GetName().Version}; Portable={AppPaths.PortableMode}; Data={AppPaths.DataDirectory}");
+            var version = (Assembly.GetEntryAssembly() ?? typeof(Logger).Assembly).GetName().Version?.ToString(3) ?? "unknown";
+            Info($"Application started. Version={version}; Portable={AppPaths.PortableMode}; Data={AppPaths.DataDirectory}");
         }
         catch
         {

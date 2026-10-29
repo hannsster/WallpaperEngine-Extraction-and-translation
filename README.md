@@ -17,11 +17,24 @@ Both heads read the same `settings.json` and `state.json`, so a portable data fo
 
 ## Download
 
-Grab the latest portable build from the [**Releases**](../../releases) page:
+Grab the latest build from the [**Releases**](../../releases) page:
 
 - **`WallpaperStudio-win-x64.zip`** — self-contained 64-bit Windows build (WPF head). No .NET install required. Extract anywhere and run `WallpaperStudio.exe`.
 - **`WallpaperStudio-linux-x64.tar.gz`** — self-contained 64-bit Linux build (Avalonia head). No .NET install required. Extract anywhere, run `chmod +x WallpaperStudio` if your archiver dropped the executable bit, then run `./WallpaperStudio`.
 - FFmpeg is optional (video frames only) and is not bundled; see [Requirements](#requirements).
+- The Windows zip also contains this README and `Unblock-WallpaperStudio.ps1`; the Linux tarball contains this README.
+
+### The Windows "Windows protected your PC" prompt
+
+The Windows build is unsigned, so the very first launch may show SmartScreen after you extract it from a downloaded zip. Choose **More info → Run anyway** once.
+
+Windows normally repeats that prompt on every launch because the extracted `WallpaperStudio.exe` carries the "downloaded from the internet" mark (a `Zone.Identifier` data stream). Wallpaper Studio deletes that mark from its own executables at startup, so the prompt appears at most once per extracted copy. You can also clear it before the first launch from inside the extracted folder:
+
+```powershell
+.\Unblock-WallpaperStudio.ps1
+```
+
+or, without PowerShell, open the folder properties in Explorer and tick **Unblock**. A signed build would avoid the prompt entirely; no certificate is used for these personal-use releases.
 
 
 ## What it does
@@ -35,7 +48,7 @@ Grab the latest portable build from the [**Releases**](../../releases) page:
 - Builds a thumbnail library with deduplication and persistent state.
 - Exports approved sources as JPEG at a configurable quality (default 90).
 - Extracts a frame from a video with FFmpeg at a chosen timestamp.
-- Extracts a **full-resolution static image from scene packages**: it follows the package's own `scene.json` → model → material → texture chain and decodes the referenced textures in-process (embedded JPEG/PNG, or raw/BC1/BC2/BC3/RGBA GPU data, including LZ4-compressed mips). A plain, validated JPEG/PNG preview inside the package is used as a clearly-labelled fallback only when extraction is not possible.
+- Extracts a **full-resolution static image from scene packages**: it follows the package's own `scene.json` → model → material → texture chain and decodes the referenced textures in-process (embedded JPEG/PNG, or raw/BC1/BC2/BC3/RGBA GPU data, including LZ4-compressed mips). Parent group transforms, rotations, scaled parallax backdrops, sprite sheets and additive light layers are applied, and you can choose how much of the scene is baked into the still (**Balanced**, **Everything**, **Background only**). A plain, validated JPEG/PNG preview inside the package is used as a clearly-labelled fallback only when extraction is not possible.
 - Auto-approves clean sources for export: images, and scenes whose real image resolves to at least 1080p. An explicit review/approval step is required before exporting a **video**, a **sub-1080p scene**, or a scene frame that comes out **nearly all black**.
 - Provides an import queue with a 1080p gate and a manual staging workflow.
 - Finds the **original artwork** behind an extracted frame with optional reverse image search:
@@ -51,7 +64,7 @@ Grab the latest portable build from the [**Releases**](../../releases) page:
   - builds new **scene** wallpapers from static images using a generated texture (**experimental**);
   - uploads **Private** by default, so items are visible only to your account;
   - never stores Steam credentials and never reports a publish it did not verify.
-- Works portably: settings, state, logs and caches live beside the executable when that folder is writable, with a `%LOCALAPPDATA%` (Windows) or `~/.local/share/WallpaperStudio` (Linux) fallback.
+- Keeps your settings and approval memory in your user profile, so installing a new version never loses them. Drop a `portable.txt` file beside the executable to keep everything next to the app instead.
 
 ## Requirements
 
@@ -102,7 +115,7 @@ dotnet publish src/WallpaperStudio/WallpaperStudio.csproj `
   -o publish
 ```
 
-The publish folder contains `WallpaperStudio.exe`. Keep `WallpaperStudioData/` and `Exports/` beside it if you want the portable layout. SkiaSharp's native assets are included automatically; use `IncludeNativeLibrariesForSelfExtract` for single-file publishing.
+The publish folder contains `WallpaperStudio.exe`. Data is stored in your user profile by default (see [Data and state](#data-and-state)); add a `portable.txt` file beside the executable if you want `WallpaperStudioData/` and `Exports/` in the app folder instead. SkiaSharp's native assets are included automatically; use `IncludeNativeLibrariesForSelfExtract` for single-file publishing.
 
 Linux (Avalonia head) — the checked-in publish profile produces a single self-contained executable:
 
@@ -127,6 +140,7 @@ Build the Avalonia head for Windows with the same command and `-r win-x64` if yo
 4. For videos and scenes, press **Review frame**:
    - videos use FFmpeg to render the chosen timestamp;
    - scenes are decoded to their **full resolution** from the package's own textures; use **Re-extract scene image** to refresh one;
+   - for scenes, **Frame composition** chooses how much of the layer stack is baked into the still: **Balanced** (background plus props at normal size), **Everything** (also stretched gradients and effect layers) or **Background only**. The choice is remembered per source, even for auto-approved scenes;
    - if extraction is not possible, the project preview, a sibling `preview.*`, or a validated embedded preview is used and labelled as a fallback;
    - scenes that resolve to at least 1080p are auto-approved by default (toggle **Auto-approve extracted scene frames** in Settings). Sub-1080p scenes, videos, all-black frames and low-resolution fallbacks still need **Approve this frame** before export;
    - **Sample frames** renders twelve timestamps when a video opens on a fade, logo or black screen, and preselects the clearest one.
@@ -179,10 +193,11 @@ Portrait 1080×1920 passes. 1280×720 and 1080×1080 do not. Low-resolution imag
 
 ## Data and state
 
-When the executable directory is writable:
+Settings, approval memory, logs, caches and drafts live in a stable per-user folder, so extracting a new version somewhere else never loses them:
 
 ```text
-<app>\WallpaperStudioData\
+%LOCALAPPDATA%\WallpaperStudio\        (Windows)
+~/.local/share/WallpaperStudio/       (Linux, or $XDG_DATA_HOME/WallpaperStudio)
   settings.json
   state.json
   logs\
@@ -190,25 +205,30 @@ When the executable directory is writable:
   cache\frames\
   cache\reverse\                  query JPEGs, result JSON, provider thumbnails, daily usage
   publish\                       built project folders + Workshop .vdf scripts
-<app>\Exports\
 ```
 
-Otherwise the same structure is created under `%LOCALAPPDATA%\WallpaperStudio` on Windows or `~/.local/share/WallpaperStudio` on Linux, with exports in `%USERPROFILE%\Pictures\Wallpaper Studio Exports` or `~/Pictures/Wallpaper Studio Exports`. Writes are atomic and corrupt state files are archived instead of being overwritten silently.
+Exports default to `%USERPROFILE%\Pictures\Wallpaper Studio Exports` on Windows and `~/Pictures/Wallpaper Studio Exports` on Linux.
+
+**Portable mode (opt-in).** Create an empty file named `portable.txt` next to `WallpaperStudio.exe`. Data then lives in `<app>\WallpaperStudioData\` and exports in `<app>\Exports\`, and nothing is written to your profile. If the app folder is read-only, the per-user folder is used instead.
+
+**Upgrades.** On first start, if a `WallpaperStudioData\` folder from an older build sits beside the executable — or in a neighbouring extracted build such as `Downloads\WallpaperStudio-win-x64\` — and the per-user folder has no settings yet, the app imports `settings.json`, `state.json`, `publish\` and the cache automatically. The old folder is left untouched and marked with `migrated-to-user-data.txt`, so it can never overwrite newer choices later. Both heads read the same files, so the portable data folder can move between Windows and Linux.
+
+Writes are atomic and corrupt state files are archived instead of being overwritten silently.
 
 `state.json` remembers approvals, tosses, exports and source fingerprints, so unchanged sources can be skipped. Re-approving a previously exported item clears its export status so the next scan offers it again. **Re-export everything** overrides the skip logic for one batch. It also remembers the Workshop ids of items you published, so a re-publish updates the same item.
 
 ## Safety and limitations
 
-- **Scene extraction is best-effort, not a renderer.** Static images are decoded from the package's own asset chain (scene → model → material → texture). Layers are placed using their scene origin and scale, and spritesheets/padded textures are cropped to the visible frame. Effects, shaders, particles and animation are not simulated, and small props or elements hidden behind user-property defaults are generally omitted, so the result is a faithful but simplified still. Every extracted frame is validated, including an all-black check, and can be re-reviewed with **Re-extract scene image**. When a scene is just a puppet/model or animated overlay over black, the app recovers the largest usable picture in the package instead of showing a black frame.
+- **Scene extraction is best-effort, not a renderer.** Static images are decoded from the package's own asset chain (scene → model → material → texture). Objects are placed with their scene origin, scale and Z rotation, combined with their parent groups, and sprite sheets/padded textures are cropped to one visible frame. Effects, shaders, particles and animation are not simulated, and values that only exist at runtime (a script or user property that moves or hides a layer) use the defaults stored in the package, so the result is a faithful but simplified still. **Frame composition** lets you choose how much of the layer stack is included. Every extracted frame is validated, including an all-black check, and can be re-reviewed with **Re-extract scene image**. When a scene is just a puppet/model or animated overlay over black, the app recovers the largest usable picture in the package instead of showing a black frame.
 - **No DRM or protection bypass.** Unsupported or protected packages are marked unsupported.
 - **No Steam credentials** are ever requested, read or stored. Sign-in happens inside Valve's own SteamCMD window; Wallpaper Studio launches that window and never sees your password or Steam Guard code.
 - **Publishing is explicit and opt-in.** Nothing is uploaded until you press **Publish**. New items upload as **Private** by default and are visible only to your account.
 - **No faked successes.** An item is marked Published only when SteamCMD writes a new, non-zero `publishedfileid` back into its script; SteamCMD's own output and any errors are shown verbatim.
 - **Image → scene generation is experimental.** It writes a minimal, unencrypted scene using a texture container reconstructed from a public open-source reader, not an official specification. Open the built folder in Wallpaper Engine and confirm it renders before sharing.
-- **Composition is approximate.** A scene is flattened by stacking the image layers that cover its frame, bottom-to-top on black, at the scene's own projection resolution (for example 3840×2160). Layers are positioned and scaled from their scene transforms; pure-black or transparent overlay sheets are skipped so they cannot erase the artwork underneath. Puppet/model meshes, particles, shaders and rotations cannot be reconstructed, so those elements may be missing or approximate.
+- **Composition is approximate.** A scene is flattened by stacking its image layers bottom-to-top on black at the scene's own projection resolution (for example 3840×2160). Object transforms are composed with their parent groups, sprite sheets are cropped to a single cell, padded textures to their real picture, and additive light layers (`colorBlendMode = 31` or black-backed sheets) are added instead of pasted. **Frame composition** controls whether props, stretched effect gradients and the background are included. Puppet/model meshes, particles, shaders, script-driven animation and per-user property variants are not reconstructed, so those elements may be missing or approximate: the export is one still moment, not the animation.
 - **Reverse image search is opt-in and bounded.** It stays off until you enable it and confirm the consent prompt. Only a 1280-pixel JPEG of the extracted frame is uploaded, and only to the providers you enable. Nothing is downloaded or published automatically: a downloaded original always lands as a **pending** candidate that you approve yourself.
 - **Results can be wrong or incomplete.** trace.moe only identifies anime scenes and cannot return the artwork; IQDB only reports a booru page and a similarity score; SauceNAO and Google Vision depend on their own indexes and free quotas. A high score is a lead, not proof of authorship. Check the source before reusing anything.
-- **API keys are stored in plain text** in `settings.json` beside the app. Use free, revocable keys and clear them if you share the folder.
+- **API keys are stored in plain text** in `settings.json` in the data folder. Use free, revocable keys and clear them if you share the folder.
 - Video frames depend on the installed FFmpeg build and its codec support.
 - Wallpaper Engine import remains a manual workflow because the application exposes no documented CLI/import API. Uploading is likewise left to Valve's SteamCMD rather than any invented API.
 - Respect creators' rights. Do not redistribute or publish content you do not own or license.
@@ -217,7 +237,7 @@ Otherwise the same structure is created under `%LOCALAPPDATA%\WallpaperStudio` o
 
 ```text
 src/WallpaperStudio.Core/          Shared, UI-neutral code (net8.0 + net8.0-windows)
-  Models/                          Sources, settings, state, import/publish queue models
+  Models/                          Sources, settings, state, scene composition, import/publish queue models
   Services/
     SourceScanner.cs               Recursive detection of projects/videos/images/pkg
     ProjectManifestReader.cs       Safe top-level project.json hints
@@ -243,7 +263,7 @@ src/WallpaperStudio.Core/          Shared, UI-neutral code (net8.0 + net8.0-wind
     DialogService.cs               IDialogService contract
     ReverseSearch/                 Provider clients, ranking, cache and downloads
   ViewModels/                      Library, review, import, publish, settings, shell
-  Infrastructure/                  Portable paths, platform shell, logging, MVVM, UI thread
+  Infrastructure/                  Data paths + legacy import, MOTW cleanup, shell, logging, MVVM, UI thread
 
 src/WallpaperStudio/               WPF head (Windows)
   App.xaml, App.xaml.cs            Composition and global error handling
@@ -261,6 +281,8 @@ src/WallpaperStudio.Avalonia/      Avalonia head (Windows + Linux)
   Services/AvaloniaDialogService.cs StorageProvider pickers, async dialogs, shell
   Converters/AppConverters.cs      Thumbnail, tone and visibility converters
   Properties/PublishProfiles/      linux-x64 self-contained publish profile
+
+scripts/Unblock-WallpaperStudio.ps1  Clears the Windows download mark from an extracted build
 ```
 
 ## Third-party components

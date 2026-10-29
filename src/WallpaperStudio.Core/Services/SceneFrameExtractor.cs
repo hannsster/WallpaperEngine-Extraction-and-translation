@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using SkiaSharp;
+using WallpaperStudio.Models;
 
 namespace WallpaperStudio.Services;
 
@@ -218,6 +219,19 @@ public sealed class SceneFrameExtractor
     private const int MinCanvasEdge = 64;
     private const int MaxCanvasEdge = 16384;
     private const double MaxUpscale = 3.0;
+
+    /// <summary>
+    /// Textures at least this large (on their longer edge) are treated as real
+    /// artwork rather than stretched effect gradients.
+    /// </summary>
+    private const int EffectGradientMaxEdge = 1024;
+
+    /// <summary>
+    /// Set <c>WALLPAPERSTUDIO_DEBUG_LAYERS=1</c> to write one line per scene layer
+    /// (texture size, on-screen footprint, and whether it was selected) to the log.
+    /// </summary>
+    private static readonly bool VerboseLayers =
+        Environment.GetEnvironmentVariable("WALLPAPERSTUDIO_DEBUG_LAYERS") == "1";
     private const int CacheJpegQuality = 98;
 
     private static readonly JsonDocumentOptions ParseOptions = new()
@@ -237,7 +251,7 @@ public sealed class SceneFrameExtractor
 
         using (assets)
         {
-            var plan = BuildPlan(assets);
+            var plan = BuildPlan(assets, SceneComposition.Balanced);
             if (plan is null || plan.CanvasWidth <= 0 || plan.CanvasHeight <= 0)
             {
                 return false;
@@ -252,11 +266,14 @@ public sealed class SceneFrameExtractor
         => Task.Run(() => TryDescribe(source, out var resolution) ? resolution : ResolutionInfo.Unknown, cancellationToken);
 
     public Task<SceneFrameResult?> ExtractAsync(WallpaperSource source, CancellationToken cancellationToken)
-        => Task.Run(() => Extract(source, cancellationToken), cancellationToken);
+        => ExtractAsync(source, source.SceneComposition, cancellationToken);
 
-    private SceneFrameResult? Extract(WallpaperSource source, CancellationToken cancellationToken)
+    public Task<SceneFrameResult?> ExtractAsync(WallpaperSource source, SceneComposition composition, CancellationToken cancellationToken)
+        => Task.Run(() => Extract(source, composition, cancellationToken), cancellationToken);
+
+    private SceneFrameResult? Extract(WallpaperSource source, SceneComposition composition, CancellationToken cancellationToken)
     {
-        var cachePath = CachePath(source);
+        var cachePath = CachePath(source, composition);
         if (File.Exists(PathHelper.ToExtendedPath(cachePath)) && SkiaImage.TryProbe(cachePath, out var cachedWidth, out var cachedHeight))
         {
             var cachedBlack = FrameAnalyzer.IsAllBlackFile(cachePath, out _);
@@ -271,7 +288,7 @@ public sealed class SceneFrameExtractor
         using (assets)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            var plan = BuildPlan(assets);
+            var plan = BuildPlan(assets, composition);
             if (plan is null || plan.Layers.Count == 0)
             {
                 return null;
@@ -295,7 +312,7 @@ public sealed class SceneFrameExtractor
             }
 
             var resolution = new ResolutionInfo(canvas.Width, canvas.Height);
-            Logger.Info($"Extracted scene frame '{source.SourcePath}' -> {resolution.Display} from {plan.Layers.Count} layer(s).");
+            Logger.Info($"Extracted scene frame '{source.SourcePath}' -> {resolution.Display} from {plan.Layers.Count} layer(s) ({composition}).");
             return new SceneFrameResult(cachePath, resolution, isBlack, plan.Layers.Count, null);
         }
     }
@@ -351,40 +368,76 @@ public sealed class SceneFrameExtractor
                     }
 
                     // Padded and spritesheet textures are larger than the picture the
-                    // object actually shows, so crop to the declared source rectangle.
-                    var sourceWidth = layer.SourceWidth > 0 ? Math.Min(layer.SourceWidth, decoded.Width) : decoded.Width;
-                    var sourceHeight = layer.SourceHeight > 0 ? Math.Min(layer.SourceHeight, decoded.Height) : decoded.Height;
-                    var sourceLeft = Math.Max(0, Math.Min(layer.SourceX, Math.Max(0, decoded.Width - sourceWidth)));
-                    var sourceTop = Math.Max(0, Math.Min(layer.SourceY, Math.Max(0, decoded.Height - sourceHeight)));
-                    var sourceRect = new SKRect(sourceLeft, sourceTop, sourceLeft + sourceWidth, sourceTop + sourceHeight);
-
-                    var destinationRect = DestinationRect(layer, plan.CanvasWidth, plan.CanvasHeight);
-                    if (destinationRect.Width <= 0 || destinationRect.Height <= 0)
+                    // object actually shows, so crop to the declared source rectangle
+                    // or the most representative frame of a sprite sheet.
+                    var sourceRect = SourceRect(layer, decoded);
+                    if (sourceRect.Width <= 0 || sourceRect.Height <= 0)
                     {
                         continue;
                     }
 
-                    // Several scenes stack a pure-black placeholder, video sheet or mask
-                    // over the actual artwork; drawing it last turns an otherwise fine
-                    // frame black. Transparent textures are equally pointless. Keep the
-                    // first layer so a genuinely dark background still gets drawn.
                     var stats = MeasureTexture(decoded, sourceRect);
-                    if ((drawn > 0 && IsNearBlack(stats)) || (plan.Layers.Count > 1 && stats.OpaqueRatio < 0.02))
+
+                    // A pure-black overlay, video sheet or mask drawn last turns an
+                    // otherwise fine frame black. Transparent textures are equally
+                    // pointless. Additive light sheets are the exception: their black
+                    // is a no-op and they must not be dropped.
+                    var additive = layer.BlendMode == SKBlendMode.Plus || layer.Spritesheet;
+                    if (!additive &&
+                        ((drawn > 0 && IsNearBlack(stats)) || (plan.Layers.Count > 1 && stats.OpaqueRatio < 0.02)))
                     {
                         continue;
+                    }
+
+                    var blend = layer.BlendMode;
+                    if (layer.Spritesheet && IsNearBlack(stats))
+                    {
+                        // Opaque sprite sheets usually store light on a black card.
+                        // Adding them (instead of drawing the black card) is what the
+                        // scene's additive light objects do.
+                        blend = SKBlendMode.Plus;
                     }
 
                     using var paint = new SKPaint
                     {
                         IsAntialias = true,
-                        BlendMode = layer.BlendMode,
+                        BlendMode = blend,
                         Color = SKColors.White.WithAlpha((byte)Math.Clamp((int)Math.Round(layer.Alpha * 255), 0, 255))
                     };
 
-                    skCanvas.DrawBitmap(decoded, sourceRect, destinationRect, sampling, paint);
+                    if (layer.Fullscreen || !layer.HasTransform)
+                    {
+                        skCanvas.DrawBitmap(decoded, sourceRect, new SKRect(0, 0, plan.CanvasWidth, plan.CanvasHeight), sampling, paint);
+                    }
+                    else
+                    {
+                        var width = layer.ObjectWidth > 0 ? layer.ObjectWidth : sourceRect.Width;
+                        var height = layer.ObjectHeight > 0 ? layer.ObjectHeight : sourceRect.Height;
+                        if (width <= 0 || height <= 0)
+                        {
+                            continue;
+                        }
+
+                        // Local bitmap coordinates are Y-down. The scene is Y-up, so
+                        // flip the picture, apply the layer/parent transform, then
+                        // flip the whole scene onto the canvas.
+                        var matrix = Compose(
+                            SceneToCanvas(plan.CanvasHeight),
+                            Compose(layer.World, FlipY()));
+                        skCanvas.Save();
+                        skCanvas.SetMatrix(matrix);
+                        skCanvas.DrawBitmap(
+                            decoded,
+                            sourceRect,
+                            new SKRect((float)(-width / 2), (float)(-height / 2), (float)(width / 2), (float)(height / 2)),
+                            sampling,
+                            paint);
+                        skCanvas.Restore();
+                    }
+
                     drawn++;
 
-                    var coverage = stats.OpaqueRatio * destinationRect.Width * destinationRect.Height / canvasArea;
+                    var coverage = stats.OpaqueRatio * FootprintWidth(layer) * FootprintHeight(layer) / canvasArea;
                     backgroundCoverage = Math.Max(backgroundCoverage, Math.Min(coverage, 1.0));
                 }
 
@@ -418,38 +471,178 @@ public sealed class SceneFrameExtractor
     }
 
     /// <summary>
-    /// Places a layer the way the scene does: fullscreen images cover the canvas,
-    /// everything else is anchored at its centre (<c>origin</c>) and scaled around
-    /// it. Layers without a usable transform keep the old behaviour of covering
-    /// the canvas.
+    /// Picks the part of a texture an object shows. Padded textures use their
+    /// declared picture size; sprite sheets use the busiest cell so a still frame
+    /// shows an actual explosion/frame instead of an empty start frame.
     /// </summary>
-    private static SKRect DestinationRect(SceneLayer layer, int canvasWidth, int canvasHeight)
+    private static SKRect SourceRect(SceneLayer layer, SKBitmap bitmap)
     {
-        if (layer.Fullscreen || !layer.HasTransform)
+        var sourceWidth = layer.SourceWidth > 0 ? Math.Min(layer.SourceWidth, bitmap.Width) : bitmap.Width;
+        var sourceHeight = layer.SourceHeight > 0 ? Math.Min(layer.SourceHeight, bitmap.Height) : bitmap.Height;
+        if (sourceWidth <= 0 || sourceHeight <= 0)
         {
-            return new SKRect(0, 0, canvasWidth, canvasHeight);
+            return SKRect.Empty;
         }
 
-        var width = layer.ObjectWidth > 0 ? layer.ObjectWidth : layer.PictureWidth;
-        var height = layer.ObjectHeight > 0 ? layer.ObjectHeight : layer.PictureHeight;
-        if (width <= 0 || height <= 0)
+        if (layer.Spritesheet && layer.GridColumns > 1 && layer.GridRows > 1)
         {
-            return new SKRect(0, 0, canvasWidth, canvasHeight);
+            var (column, row) = SelectSpritesheetCell(bitmap, layer.GridColumns, layer.GridRows, sourceWidth, sourceHeight);
+            var left = Math.Clamp(column * sourceWidth, 0, Math.Max(0, bitmap.Width - sourceWidth));
+            var top = Math.Clamp(row * sourceHeight, 0, Math.Max(0, bitmap.Height - sourceHeight));
+            return new SKRect(left, top, left + sourceWidth, top + sourceHeight);
         }
 
-        width *= layer.ScaleX > 0 ? layer.ScaleX : 1.0;
-        height *= layer.ScaleY > 0 ? layer.ScaleY : 1.0;
+        var x = Math.Max(0, Math.Min(layer.SourceX, Math.Max(0, bitmap.Width - sourceWidth)));
+        var y = Math.Max(0, Math.Min(layer.SourceY, Math.Max(0, bitmap.Height - sourceHeight)));
+        return new SKRect(x, y, x + sourceWidth, y + sourceHeight);
+    }
 
-        // A layer that already covers the canvas should not leave a hairline at the edges.
-        if (CoversCanvas(width, canvasWidth) && CoversCanvas(height, canvasHeight))
+    private static (int Column, int Row) SelectSpritesheetCell(
+        SKBitmap bitmap,
+        int columns,
+        int rows,
+        int cellWidth,
+        int cellHeight)
+    {
+        const int Grid = 24;
+        var bestScore = -1.0;
+        var bestColumn = 0;
+        var bestRow = 0;
+        for (var row = 0; row < rows; row++)
         {
-            return new SKRect(0, 0, canvasWidth, canvasHeight);
+            for (var column = 0; column < columns; column++)
+            {
+                var left = column * cellWidth;
+                var top = row * cellHeight;
+                if (left + cellWidth > bitmap.Width || top + cellHeight > bitmap.Height)
+                {
+                    continue;
+                }
+
+                var score = 0.0;
+                for (var y = 0; y < Grid; y++)
+                {
+                    var py = (int)Math.Clamp(top + ((y + 0.5f) / Grid) * cellHeight, top, top + cellHeight - 1);
+                    for (var x = 0; x < Grid; x++)
+                    {
+                        var px = (int)Math.Clamp(left + ((x + 0.5f) / Grid) * cellWidth, left, left + cellWidth - 1);
+                        var pixel = bitmap.GetPixel(px, py);
+                        if (pixel.Alpha < 24)
+                        {
+                            continue;
+                        }
+
+                        score += 0.2126 * pixel.Red + 0.7152 * pixel.Green + 0.0722 * pixel.Blue;
+                    }
+                }
+
+                if (score > bestScore)
+                {
+                    bestScore = score;
+                    bestColumn = column;
+                    bestRow = row;
+                }
+            }
         }
 
-        var left = (float)(layer.OriginX - (width / 2));
-        // Scene coordinates are Y-up; the canvas is Y-down.
-        var top = (float)(canvasHeight - layer.OriginY - (height / 2));
-        return new SKRect(left, top, (float)(left + width), (float)(top + height));
+        return (bestColumn, bestRow);
+    }
+
+    private static SKMatrix SceneToCanvas(int canvasHeight)
+        => Matrix(1, 0, 0, -1, 0, canvasHeight);
+
+    private static SKMatrix FlipY()
+        => Matrix(1, 0, 0, -1, 0, 0);
+
+    private static SKMatrix Matrix(double a, double b, double c, double d, double e, double f) => new()
+    {
+        ScaleX = (float)a,
+        SkewX = (float)c,
+        TransX = (float)e,
+        SkewY = (float)b,
+        ScaleY = (float)d,
+        TransY = (float)f,
+        Persp0 = 0,
+        Persp1 = 0,
+        Persp2 = 1
+    };
+
+    /// <summary>Composes two 2D affine matrices: the result applies <paramref name="right"/> first.</summary>
+    private static SKMatrix Compose(SKMatrix left, SKMatrix right) => Matrix(
+        (double)left.ScaleX * right.ScaleX + (double)left.SkewX * right.SkewY,
+        (double)left.SkewY * right.ScaleX + (double)left.ScaleY * right.SkewY,
+        (double)left.ScaleX * right.SkewX + (double)left.SkewX * right.ScaleY,
+        (double)left.SkewY * right.SkewX + (double)left.ScaleY * right.ScaleY,
+        (double)left.ScaleX * right.TransX + (double)left.SkewX * right.TransY + left.TransX,
+        (double)left.SkewY * right.TransX + (double)left.ScaleY * right.TransY + left.TransY);
+
+    private static SKMatrix LocalMatrix(JsonElement obj)
+    {
+        ReadVector2(obj, "origin", out var originX, out var originY);
+        if (!ReadVector2(obj, "scale", out var scaleX, out var scaleY))
+        {
+            scaleX = 1.0;
+            scaleY = 1.0;
+        }
+
+        if (scaleX <= 0)
+        {
+            scaleX = 1.0;
+        }
+
+        if (scaleY <= 0)
+        {
+            scaleY = 1.0;
+        }
+
+        var angle = ReadAngle(obj);
+        var cos = Math.Cos(angle);
+        var sin = Math.Sin(angle);
+        return Matrix(
+            cos * scaleX,
+            sin * scaleX,
+            -sin * scaleY,
+            cos * scaleY,
+            originX,
+            originY);
+    }
+
+    private static double ReadAngle(JsonElement element)
+    {
+        if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty("angles", out var property))
+        {
+            return 0;
+        }
+
+        if (property.ValueKind == JsonValueKind.Object &&
+            property.TryGetProperty("value", out var inner))
+        {
+            property = inner;
+        }
+
+        if (property.ValueKind == JsonValueKind.String)
+        {
+            var parts = (property.GetString() ?? string.Empty)
+                .Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (parts.Length >= 3 &&
+                double.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var z))
+            {
+                return z;
+            }
+
+            return 0;
+        }
+
+        if (property.ValueKind == JsonValueKind.Array)
+        {
+            var values = property.EnumerateArray().ToArray();
+            if (values.Length >= 3 && values[2].ValueKind == JsonValueKind.Number)
+            {
+                return values[2].GetDouble();
+            }
+        }
+
+        return 0;
     }
 
     private static bool CoversCanvas(double extent, int canvas)
@@ -596,7 +789,7 @@ public sealed class SceneFrameExtractor
         return true;
     }
 
-    private static ScenePlan? BuildPlan(ISceneAssets assets)
+    private static ScenePlan? BuildPlan(ISceneAssets assets, SceneComposition composition)
     {
         if (!TryReadJson(assets, "scene.json", out var root))
         {
@@ -610,9 +803,21 @@ public sealed class SceneFrameExtractor
             root.TryGetProperty("objects", out var objects) &&
             objects.ValueKind == JsonValueKind.Array)
         {
-            foreach (var obj in objects.EnumerateArray())
+            var items = objects.EnumerateArray().ToList();
+            var byId = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+            foreach (var item in items)
             {
-                var layer = TryBuildLayer(assets, obj);
+                if (TryGetId(item, "id", out var id))
+                {
+                    byId[id] = item;
+                }
+            }
+
+            var worldCache = new Dictionary<string, SKMatrix>(StringComparer.Ordinal);
+            foreach (var obj in items)
+            {
+                var world = ResolveWorld(obj, byId, worldCache, new HashSet<string>(StringComparer.Ordinal), depth: 0);
+                var layer = TryBuildLayer(assets, obj, world);
                 if (layer is not null)
                 {
                     layers.Add(layer);
@@ -654,10 +859,20 @@ public sealed class SceneFrameExtractor
 
         var canvasArea = (double)canvasWidth * canvasHeight;
 
-        // Prefer layers that are drawn at (roughly) their texture resolution.
-        // Stretched effect gradients are only used when nothing else covers the
-        // frame, because drawing them last would tint over the actual artwork.
-        var selected = SelectLayers(layers.Where(layer => !layer.Upscaled), canvasArea);
+        // A background is a layer that already fills a good part of the frame. Once
+        // one exists, small props and light layers are meaningful instead of
+        // floating on black, so "Balanced" keeps them. Stretched effect gradients
+        // stay out unless the user explicitly asks for Everything.
+        var hasBackground = layers.Any(layer => !layer.Upscaled && CoversCanvasArea(layer, canvasArea));
+        var selected = composition switch
+        {
+            SceneComposition.Full => layers.ToList(),
+            SceneComposition.Background => layers.Where(layer => CoversMostOfCanvas(layer, canvasArea)).ToList(),
+            _ => hasBackground
+                ? layers.Where(layer => !layer.Upscaled).ToList()
+                : SelectLayers(layers.Where(layer => !layer.Upscaled), canvasArea)
+        };
+
         if (selected.Count == 0)
         {
             selected = SelectLayers(layers, canvasArea);
@@ -682,6 +897,8 @@ public sealed class SceneFrameExtractor
             selected = [largest];
         }
 
+        var selectionSnapshot = VerboseLayers ? selected.ToHashSet() : null;
+
         // A wallpaper built from a single image should fill the frame even when the
         // author left the scene projection smaller than the artwork, but a small
         // object must not be blown up to cover the whole canvas.
@@ -690,11 +907,41 @@ public sealed class SceneFrameExtractor
             selected[0] = selected[0] with { Fullscreen = true };
         }
 
+        if (VerboseLayers && selectionSnapshot is not null)
+        {
+            Logger.Debug($"scene plan {composition}: canvas={canvasWidth}x{canvasHeight} candidates={layers.Count} selected={selected.Count}");
+            foreach (var layer in layers)
+            {
+                Logger.Debug(
+                    $"  layer {layer.PackageName}: tex={layer.PictureWidth}x{layer.PictureHeight} " +
+                    $"obj={layer.ObjectWidth}x{layer.ObjectHeight} " +
+                    $"screen={FootprintWidth(layer):F0}x{FootprintHeight(layer):F0} " +
+                    $"fullscreen={layer.Fullscreen} upscaled={layer.Upscaled} blend={layer.BlendMode} " +
+                    $"selected={selectionSnapshot.Contains(layer)}");
+            }
+        }
+
         return new ScenePlan(canvasWidth, canvasHeight, selected);
     }
 
     private static List<SceneLayer> SelectLayers(IEnumerable<SceneLayer> layers, double canvasArea)
         => layers.Where(layer => CoversCanvasArea(layer, canvasArea)).ToList();
+
+    /// <summary>
+    /// A backdrop fills most of the frame: a fullscreen image, or one drawn at
+    /// roughly the canvas size. Large foreground objects are deliberately not
+    /// enough, so "Background only" really leaves them out.
+    /// </summary>
+    private static bool CoversMostOfCanvas(SceneLayer layer, double canvasArea)
+    {
+        if (layer.Fullscreen)
+        {
+            return true;
+        }
+
+        var area = FootprintWidth(layer) * FootprintHeight(layer);
+        return area >= canvasArea * 0.75;
+    }
 
     /// <summary>
     /// A layer earns a place in the frame when it is roughly as large as the
@@ -712,11 +959,71 @@ public sealed class SceneFrameExtractor
         return area >= canvasArea * 0.4;
     }
 
-    private static double FootprintWidth(SceneLayer layer)
-        => (layer.ObjectWidth > 0 ? layer.ObjectWidth : layer.PictureWidth) * (layer.ScaleX > 0 ? layer.ScaleX : 1.0);
+    private static double FootprintWidth(SceneLayer layer) => Footprint(layer).Width;
 
-    private static double FootprintHeight(SceneLayer layer)
-        => (layer.ObjectHeight > 0 ? layer.ObjectHeight : layer.PictureHeight) * (layer.ScaleY > 0 ? layer.ScaleY : 1.0);
+    private static double FootprintHeight(SceneLayer layer) => Footprint(layer).Height;
+
+    /// <summary>
+    /// How large the layer is actually drawn on screen, before rotation widens its
+    /// bounding box. Used to tell a stretched low-resolution effect from artwork
+    /// that merely sits in a rotated or scaled group.
+    /// </summary>
+    private static (double Width, double Height) DrawnSize(SceneLayer layer)
+    {
+        var width = layer.ObjectWidth > 0 ? layer.ObjectWidth : layer.PictureWidth;
+        var height = layer.ObjectHeight > 0 ? layer.ObjectHeight : layer.PictureHeight;
+        if (width <= 0 || height <= 0)
+        {
+            return (0, 0);
+        }
+
+        if (!layer.HasTransform)
+        {
+            return (width, height);
+        }
+
+        var matrix = layer.World;
+        var scaleX = Math.Sqrt(matrix.ScaleX * matrix.ScaleX + matrix.SkewY * matrix.SkewY);
+        var scaleY = Math.Sqrt(matrix.SkewX * matrix.SkewX + matrix.ScaleY * matrix.ScaleY);
+        return (width * scaleX, height * scaleY);
+    }
+
+    private static (double Width, double Height) Footprint(SceneLayer layer)
+    {
+        var width = layer.ObjectWidth > 0 ? layer.ObjectWidth : layer.PictureWidth;
+        var height = layer.ObjectHeight > 0 ? layer.ObjectHeight : layer.PictureHeight;
+        if (width <= 0 || height <= 0)
+        {
+            return (0, 0);
+        }
+
+        if (!layer.HasTransform)
+        {
+            return (width, height);
+        }
+
+        var halfWidth = width / 2;
+        var halfHeight = height / 2;
+        double minX = double.MaxValue, minY = double.MaxValue, maxX = double.MinValue, maxY = double.MinValue;
+        foreach (var (x, y) in new[]
+                 {
+                     (-halfWidth, -halfHeight), (halfWidth, -halfHeight),
+                     (halfWidth, halfHeight), (-halfWidth, halfHeight)
+                 })
+        {
+            var (tx, ty) = Apply(layer.World, x, y);
+            minX = Math.Min(minX, tx);
+            minY = Math.Min(minY, ty);
+            maxX = Math.Max(maxX, tx);
+            maxY = Math.Max(maxY, ty);
+        }
+
+        return (maxX - minX, maxY - minY);
+    }
+
+    private static (double X, double Y) Apply(SKMatrix matrix, double x, double y)
+        => (matrix.ScaleX * x + matrix.SkewX * y + matrix.TransX,
+            matrix.SkewY * x + matrix.ScaleY * y + matrix.TransY);
 
     private static ScenePlan? BuildFallbackPlan(ISceneAssets assets)
     {
@@ -754,10 +1061,7 @@ public sealed class SceneFrameExtractor
                 height,
                 width,
                 height,
-                0,
-                0,
-                1.0,
-                1.0,
+                SKMatrix.Identity,
                 HasTransform: false,
                 Fullscreen: true,
                 Alpha: 1.0,
@@ -768,6 +1072,9 @@ public sealed class SceneFrameExtractor
                 0,
                 width,
                 height,
+                Spritesheet: false,
+                GridColumns: 1,
+                GridRows: 1,
                 Upscaled: false);
         }
 
@@ -776,7 +1083,62 @@ public sealed class SceneFrameExtractor
             : new ScenePlan(best.PictureWidth, best.PictureHeight, [best]);
     }
 
-    private static SceneLayer? TryBuildLayer(ISceneAssets assets, JsonElement obj)
+    private static SKMatrix ResolveWorld(
+        JsonElement obj,
+        Dictionary<string, JsonElement> byId,
+        Dictionary<string, SKMatrix> cache,
+        HashSet<string> visiting,
+        int depth)
+    {
+        var hasId = TryGetId(obj, "id", out var id);
+        if (hasId && cache.TryGetValue(id, out var cached))
+        {
+            return cached;
+        }
+
+        var local = LocalMatrix(obj);
+        if (hasId && !visiting.Add(id))
+        {
+            return local;
+        }
+
+        if (depth < 32 && TryGetId(obj, "parent", out var parentId) && byId.TryGetValue(parentId, out var parent))
+        {
+            var parentWorld = ResolveWorld(parent, byId, cache, visiting, depth + 1);
+            local = Compose(parentWorld, local);
+        }
+
+        if (hasId)
+        {
+            visiting.Remove(id);
+            cache[id] = local;
+        }
+
+        return local;
+    }
+
+    private static bool TryGetId(JsonElement element, string name, out string id)
+    {
+        id = string.Empty;
+        if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(name, out var property))
+        {
+            return false;
+        }
+
+        switch (property.ValueKind)
+        {
+            case JsonValueKind.Number:
+                id = property.GetRawText();
+                return id.Length > 0;
+            case JsonValueKind.String:
+                id = property.GetString() ?? string.Empty;
+                return id.Length > 0;
+            default:
+                return false;
+        }
+    }
+
+    private static SceneLayer? TryBuildLayer(ISceneAssets assets, JsonElement obj, SKMatrix world)
     {
         if (obj.ValueKind != JsonValueKind.Object)
         {
@@ -834,15 +1196,8 @@ public sealed class SceneFrameExtractor
             ReadSize(imageJson, out objectWidth, out objectHeight);
         }
 
-        var hasTransform = ReadVector2(obj, "origin", out var originX, out var originY);
-        if (!ReadVector2(obj, "scale", out var scaleX, out var scaleY))
-        {
-            scaleX = 1.0;
-            scaleY = 1.0;
-        }
-
         if (!TryReadJson(assets, materialName, out var materialJson) ||
-            !TryGetFirstTexture(assets, materialJson, out var textureName, out var blending))
+            !TryGetFirstTexture(assets, materialJson, out var textureName, out var blending, out var spritesheet))
         {
             return null;
         }
@@ -859,73 +1214,125 @@ public sealed class SceneFrameExtractor
             return null;
         }
 
-        // Low-resolution effect gradients are stretched many times over the scene
-        // and would paint the whole frame with a tint. Flag them so they only take
-        // part when nothing else covers the canvas.
-        var upscaled = false;
-        if (!fullscreen && hasTransform && objectWidth > 0 && objectHeight > 0)
-        {
-            var footprintWidth = objectWidth * (scaleX > 0 ? scaleX : 1.0);
-            var footprintHeight = objectHeight * (scaleY > 0 ? scaleY : 1.0);
-            upscaled = footprintWidth > width * MaxUpscale || footprintHeight > height * MaxUpscale;
-        }
+        ReadDimension(imageJson, "width", out var declaredWidth);
+        ReadDimension(imageJson, "height", out var declaredHeight);
 
-        // Spritesheets and padded textures store the visible frame in a corner while
-        // the image object declares the real picture size.
+        // Spritesheets store many animation frames in one texture. Crop to a single
+        // cell (the busiest one) instead of drawing every frame at once.
         var sourceWidth = width;
         var sourceHeight = height;
-        if (ReadDimension(imageJson, "width", out var declaredWidth) &&
-            ReadDimension(imageJson, "height", out var declaredHeight) &&
+        var gridColumns = 1;
+        var gridRows = 1;
+        if (spritesheet)
+        {
+            var cellWidth = declaredWidth > 0 ? declaredWidth : objectWidth;
+            var cellHeight = declaredHeight > 0 ? declaredHeight : objectHeight;
+            if (cellWidth > 0 && cellHeight > 0)
+            {
+                var columns = (int)Math.Floor((width + 0.5) / cellWidth);
+                var rows = (int)Math.Floor((height + 0.5) / cellHeight);
+                var fits = columns >= 1 && rows >= 1 && columns * rows > 1 &&
+                           columns * cellWidth <= width + 1 && rows * cellHeight <= height + 1 &&
+                           width - columns * cellWidth <= cellWidth && height - rows * cellHeight <= cellHeight;
+                if (fits)
+                {
+                    gridColumns = columns;
+                    gridRows = rows;
+                    sourceWidth = (int)Math.Round(cellWidth);
+                    sourceHeight = (int)Math.Round(cellHeight);
+                }
+            }
+        }
+
+        if (gridColumns == 1 && gridRows == 1 &&
             declaredWidth > 0 && declaredHeight > 0 &&
             declaredWidth <= width && declaredHeight <= height &&
             (declaredWidth < width - 1 || declaredHeight < height - 1))
         {
+            // Padded texture: the real picture sits in the top-left corner.
             sourceWidth = (int)Math.Round(declaredWidth);
             sourceHeight = (int)Math.Round(declaredHeight);
-            if (objectWidth <= 0)
-            {
-                objectWidth = sourceWidth;
-            }
-
-            if (objectHeight <= 0)
-            {
-                objectHeight = sourceHeight;
-            }
         }
 
-        return new SceneLayer(
+        if (objectWidth <= 0)
+        {
+            objectWidth = sourceWidth;
+        }
+
+        if (objectHeight <= 0)
+        {
+            objectHeight = sourceHeight;
+        }
+
+        var additive = (TryGetInt(obj, "colorBlendMode", out var objectBlend) && objectBlend == 31) ||
+                       (TryGetInt(imageJson, "colorBlendMode", out var imageBlend) && imageBlend == 31);
+        var blend = additive ? SKBlendMode.Plus : MapBlend(blending);
+
+        // A layer without any transform keeps the old behaviour of covering the
+        // canvas. Parent group transforms mean even "default" children are placed.
+        var hasTransform = !world.IsIdentity || fullscreen;
+
+        var layer = new SceneLayer(
             packageName,
             width,
             height,
             objectWidth,
             objectHeight,
-            originX,
-            originY,
-            scaleX,
-            scaleY,
+            world,
             hasTransform,
             fullscreen,
             alpha,
-            MapBlend(blending),
+            blend,
             imageType,
             format,
             0,
             0,
             sourceWidth,
             sourceHeight,
-            upscaled);
+            spritesheet,
+            gridColumns,
+            gridRows,
+            Upscaled: false);
+
+        // Low-resolution effect gradients are stretched many times over the scene
+        // and would paint the whole frame with a tint. Flag them so they only take
+        // part when nothing else covers the canvas. Full-resolution artwork is never
+        // flagged, even when it is scaled up for a parallax background: dropping it
+        // would leave the scene's character floating on black.
+        if (!fullscreen && layer.HasTransform)
+        {
+            var drawn = DrawnSize(layer);
+            var ratio = Math.Max(
+                drawn.Width / Math.Max(1, sourceWidth),
+                drawn.Height / Math.Max(1, sourceHeight));
+            var detailed = Math.Max(sourceWidth, sourceHeight) >= EffectGradientMaxEdge;
+            if (!detailed && ratio > MaxUpscale)
+            {
+                layer = layer with { Upscaled = true };
+            }
+        }
+
+        return layer;
     }
 
-    private static bool TryGetFirstTexture(ISceneAssets assets, JsonElement materialJson, out string name, out string? blending)
+    private static bool TryGetFirstTexture(
+        ISceneAssets assets,
+        JsonElement materialJson,
+        out string name,
+        out string? blending,
+        out bool spritesheet)
     {
         name = string.Empty;
         blending = null;
+        spritesheet = false;
         if (materialJson.ValueKind != JsonValueKind.Object ||
             !materialJson.TryGetProperty("passes", out var passes) ||
             passes.ValueKind != JsonValueKind.Array)
         {
             return false;
         }
+
+        TryReadSpriteSheetCombo(materialJson, out spritesheet);
 
         foreach (var pass in passes.EnumerateArray())
         {
@@ -952,11 +1359,40 @@ public sealed class SceneFrameExtractor
                 name = value;
                 TryGetString(pass, "blending", out var passBlending);
                 blending = passBlending;
+                TryReadSpriteSheetCombo(pass, out spritesheet);
                 return true;
             }
         }
 
         return false;
+    }
+
+    private static void TryReadSpriteSheetCombo(JsonElement materialJson, out bool spritesheet)
+    {
+        spritesheet = false;
+        if (!materialJson.TryGetProperty("combos", out var combos) || combos.ValueKind != JsonValueKind.Object)
+        {
+            return;
+        }
+
+        if (!combos.TryGetProperty("SPRITESHEET", out var value))
+        {
+            return;
+        }
+
+        switch (value.ValueKind)
+        {
+            case JsonValueKind.Number:
+                spritesheet = value.GetDouble() != 0;
+                break;
+            case JsonValueKind.True:
+                spritesheet = true;
+                break;
+            case JsonValueKind.String:
+                spritesheet = !string.IsNullOrWhiteSpace(value.GetString()) &&
+                              !value.GetString()!.Equals("0", StringComparison.Ordinal);
+                break;
+        }
     }
 
     private static bool IsColourTextureAsset(ISceneAssets assets, string name)
@@ -974,6 +1410,13 @@ public sealed class SceneFrameExtractor
         if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(name, out var value))
         {
             return false;
+        }
+
+        // Animated or user-bound properties store the current/default value in "value".
+        if (value.ValueKind == JsonValueKind.Object &&
+            value.TryGetProperty("value", out var inner))
+        {
+            value = inner;
         }
 
         if (value.ValueKind == JsonValueKind.String)
@@ -1014,6 +1457,12 @@ public sealed class SceneFrameExtractor
         if (element.ValueKind != JsonValueKind.Object || !element.TryGetProperty(name, out var property))
         {
             return false;
+        }
+
+        if (property.ValueKind == JsonValueKind.Object &&
+            property.TryGetProperty("value", out var inner))
+        {
+            property = inner;
         }
 
         if (property.ValueKind == JsonValueKind.Number)
@@ -1191,6 +1640,12 @@ public sealed class SceneFrameExtractor
             return;
         }
 
+        if (size.ValueKind == JsonValueKind.Object &&
+            size.TryGetProperty("value", out var inner))
+        {
+            size = inner;
+        }
+
         if (size.ValueKind == JsonValueKind.String)
         {
             var parts = (size.GetString() ?? string.Empty)
@@ -1326,7 +1781,7 @@ public sealed class SceneFrameExtractor
         return false;
     }
 
-    private static string CachePath(WallpaperSource source)
+    private static string CachePath(WallpaperSource source, SceneComposition composition)
     {
         var key = !string.IsNullOrWhiteSpace(source.FileHash) && source.FileHash.Length >= 16
             ? source.FileHash[..16]
@@ -1334,7 +1789,13 @@ public sealed class SceneFrameExtractor
 
         // Bump this whenever the compositor changes so old frames are re-extracted
         // instead of being served from a previous version's cache.
-        return Path.Combine(AppPaths.FrameCacheDirectory, $"scene-v3-{key}.jpg");
+        var variant = composition switch
+        {
+            SceneComposition.Full => "full",
+            SceneComposition.Background => "background",
+            _ => "balanced"
+        };
+        return Path.Combine(AppPaths.FrameCacheDirectory, $"scene-v4-{variant}-{key}.jpg");
     }
 
     private static string ShortHash(string value)
@@ -1349,10 +1810,7 @@ public sealed class SceneFrameExtractor
         int PictureHeight,
         double ObjectWidth,
         double ObjectHeight,
-        double OriginX,
-        double OriginY,
-        double ScaleX,
-        double ScaleY,
+        SKMatrix World,
         bool HasTransform,
         bool Fullscreen,
         double Alpha,
@@ -1363,6 +1821,9 @@ public sealed class SceneFrameExtractor
         int SourceY,
         int SourceWidth,
         int SourceHeight,
+        bool Spritesheet,
+        int GridColumns,
+        int GridRows,
         bool Upscaled);
 
     private sealed record ScenePlan(int CanvasWidth, int CanvasHeight, IReadOnlyList<SceneLayer> Layers);

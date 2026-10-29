@@ -37,6 +37,9 @@ public sealed class ApprovalViewModel : ObservableObject
     private double _frameTimestamp;
     private string? _notice;
     private CancellationTokenSource? _loadCts;
+    private SceneCompositionOption _selectedSceneComposition;
+    private int _compositionVersion;
+    private bool _compositionInvalidatesExport;
 
     public ApprovalViewModel(
         FfmpegService ffmpeg,
@@ -59,6 +62,23 @@ public sealed class ApprovalViewModel : ObservableObject
         _dialogs = dialogs;
         _shell = shell;
 
+        SceneCompositionOptions =
+        [
+            new SceneCompositionOption(
+                SceneComposition.Balanced,
+                "Balanced",
+                "Background plus objects at their normal size. Small props and light effects are kept."),
+            new SceneCompositionOption(
+                SceneComposition.Full,
+                "Everything",
+                "Adds every drawable layer, including stretched gradients and effect layers."),
+            new SceneCompositionOption(
+                SceneComposition.Background,
+                "Background only",
+                "Only layers that fill most of the frame. Useful when foreground props sit in the wrong place.")
+        ];
+        _selectedSceneComposition = SceneCompositionOptions[0];
+
         FrameSamples.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasFrameSamples), nameof(FrameSamplesSummary));
 
         _approveCommand = new AsyncRelayCommand(ApproveAsync, () => Item is not null && HasPreview && !IsBusy);
@@ -67,7 +87,7 @@ public sealed class ApprovalViewModel : ObservableObject
         _regenerateCommand = new AsyncRelayCommand(RegenerateAsync, () => Item?.Kind == WallpaperKind.VideoWallpaper && HasFfmpeg && !IsBusy);
         _regenerateCommand.ExecutionFailed += (_, ex) => _dialogs.ShowErrorAsync("Frame extraction failed", ex.Message, ex);
 
-        _scanEmbeddedCommand = new AsyncRelayCommand(ScanEmbeddedAsync, () => Item is not null && Item.Kind == WallpaperKind.SceneProject && !HasPreview && !IsBusy);
+        _scanEmbeddedCommand = new AsyncRelayCommand(ScanEmbeddedAsync, () => Item is not null && Item.Kind == WallpaperKind.SceneProject && !IsBusy);
         _scanEmbeddedCommand.ExecutionFailed += (_, ex) => _dialogs.ShowErrorAsync("Preview scan failed", ex.Message, ex);
 
         _searchOriginalCommand = new AsyncRelayCommand(
@@ -107,6 +127,16 @@ public sealed class ApprovalViewModel : ObservableObject
         {
             if (SetProperty(ref _item, value))
             {
+                var option = SceneCompositionOptions.FirstOrDefault(item => item.Value == (value?.SceneComposition ?? SceneComposition.Balanced))
+                             ?? SceneCompositionOptions[0];
+                if (!ReferenceEquals(option, _selectedSceneComposition))
+                {
+                    _selectedSceneComposition = option;
+                    OnPropertyChanged(nameof(SelectedSceneComposition), nameof(SceneCompositionDescription));
+                }
+
+                _compositionInvalidatesExport = false;
+
                 OnPropertyChanged(
                     nameof(HasItem), nameof(Title), nameof(SourcePath), nameof(KindGlyph), nameof(SourceTypeLabel),
                     nameof(ResolutionDetail), nameof(MetadataSummary), nameof(IsVideo), nameof(IsScene), nameof(HasFfmpeg),
@@ -165,6 +195,55 @@ public sealed class ApprovalViewModel : ObservableObject
         ApprovalStatus.NotRequired => "Approval not required",
         _ => string.Empty
     };
+
+    /// <summary>How much of a scene is baked into its static frame.</summary>
+    public IReadOnlyList<SceneCompositionOption> SceneCompositionOptions { get; }
+
+    public SceneCompositionOption SelectedSceneComposition
+    {
+        get => _selectedSceneComposition;
+        set
+        {
+            if (value is null || ReferenceEquals(value, _selectedSceneComposition))
+            {
+                return;
+            }
+
+            _selectedSceneComposition = value;
+            OnPropertyChanged(nameof(SelectedSceneComposition), nameof(SceneCompositionDescription));
+            if (Item is null || Item.Kind != WallpaperKind.SceneProject)
+            {
+                return;
+            }
+
+            Item.SceneComposition = value.Value;
+            var exportedEarlier = Item.ExportStatus == ExportStatus.Exported;
+            if (exportedEarlier)
+            {
+                // The old JPEG was flattened with a different layer stack, so it is
+                // stale from now on. Mark the source as needing a fresh export.
+                Item.ExportStatus = ExportStatus.NotExported;
+                Item.ExportPath = null;
+                Item.ExportedDate = null;
+                _compositionInvalidatesExport = true;
+            }
+
+            try
+            {
+                // Persist immediately, even for auto-approved scenes, so the chosen
+                // composition survives restarts and future versions.
+                _state.RecordApproval(Item, clearExportStatus: exportedEarlier);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warn("Could not save the scene composition.", ex);
+            }
+
+            _ = ApplySceneCompositionAsync();
+        }
+    }
+
+    public string SceneCompositionDescription => _selectedSceneComposition.Description;
 
     public byte[]? PreviewImage
     {
@@ -1012,6 +1091,71 @@ public sealed class ApprovalViewModel : ObservableObject
             ? "A manually chosen image is being used. It will be exported exactly as approved."
             : null;
         RaiseCommandStates();
+    }
+
+    private async Task ApplySceneCompositionAsync()
+    {
+        var item = Item;
+        if (item is null || item.Kind != WallpaperKind.SceneProject)
+        {
+            return;
+        }
+
+        var version = ++_compositionVersion;
+        var token = _loadCts?.Token ?? CancellationToken.None;
+        IsBusy = true;
+        BusyMessage = "Re-compositing the scene…";
+        try
+        {
+            var scene = await _sceneFrames.ExtractAsync(item, item.SceneComposition, token);
+            if (version != _compositionVersion || !ReferenceEquals(item, Item))
+            {
+                return;
+            }
+
+            if (scene is null)
+            {
+                Notice = "This scene could not be composited with that choice. Try another composition, or choose an image manually.";
+                return;
+            }
+
+            item.CandidateFramePath = scene.Path;
+            item.UsesPreviewFallback = false;
+            if (scene.Resolution.IsKnown)
+            {
+                item.Resolution = scene.Resolution;
+            }
+
+            await ShowPreviewAsync(scene.Path, token);
+            Notice = scene.IsAllBlack
+                ? "This composition is almost entirely black. Try another one or review the source in Wallpaper Engine."
+                : $"Scene composition set to {item.SceneCompositionLabel}.";
+            if (_compositionInvalidatesExport)
+            {
+                _compositionInvalidatesExport = false;
+                Notice += " Export it again to save the new composition.";
+            }
+
+            _shell.ReportText($"{item.Title}: {Notice}");
+        }
+        catch (OperationCanceledException)
+        {
+            // A newer review/composition request superseded this one.
+        }
+        catch (Exception ex)
+        {
+            Logger.Warn($"Could not re-composite scene '{item.SourcePath}'.", ex);
+            Notice = "The scene could not be re-composited. See the log for details.";
+        }
+        finally
+        {
+            if (version == _compositionVersion)
+            {
+                IsBusy = false;
+                BusyMessage = string.Empty;
+                RaiseCommandStates();
+            }
+        }
     }
 
     private async Task ScanEmbeddedAsync()

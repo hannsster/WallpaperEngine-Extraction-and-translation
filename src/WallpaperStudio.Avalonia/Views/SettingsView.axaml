@@ -341,7 +341,7 @@
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                   <mi:MaterialIcon Kind="Harddisk" Width="15" Height="15"
                                    Foreground="{StaticResource Brush.Accent}" />
-                  <TextBlock Text="Portable storage" Classes="sectionTitle" Margin="9,0,0,0" />
+                  <TextBlock Text="Storage" Classes="sectionTitle" Margin="9,0,0,0" />
                 </StackPanel>
 
                 <Border Classes="chip" HorizontalAlignment="Left"
@@ -354,6 +354,8 @@
                 <TextBlock Text="DATA FOLDER" Classes="micro" Margin="0,12,0,0" />
                 <TextBlock Text="{Binding DataDirectory}" Classes="monoPath" Margin="0,4,0,0"
                            TextWrapping="Wrap" TextTrimming="None" />
+                <TextBlock Text="{Binding MigrationNote}" Classes="micro" Margin="0,6,0,0"
+                           TextWrapping="Wrap" IsVisible="{Binding HasMigrationNote}" />
                 <TextBlock Text="STATE FILE" Classes="micro" Margin="0,10,0,0" />
                 <TextBlock Text="{Binding StateFile}" Classes="monoPath" Margin="0,4,0,0"
                            TextWrapping="Wrap" TextTrimming="None" />

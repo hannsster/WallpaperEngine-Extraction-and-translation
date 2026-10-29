@@ -61,6 +61,7 @@ jobs:
           )
           Set-Content -Path publish/steamcmd/PUT-STEAMCMD-HERE.txt -Value $steamcmdNote
           Copy-Item README.md publish/README.md -Force
+          Copy-Item scripts/Unblock-WallpaperStudio.ps1 publish/Unblock-WallpaperStudio.ps1 -Force
 
       - name: Build zip
         shell: pwsh

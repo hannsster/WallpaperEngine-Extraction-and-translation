@@ -27,6 +27,7 @@ public partial class App : Application
     {
         AppPaths.Initialize();
         Logger.Initialize();
+        WindowsUnblock.Cleanup();
 
         UiThread.Initialize(PostToUi, () => Dispatcher.UIThread.CheckAccess());
 
